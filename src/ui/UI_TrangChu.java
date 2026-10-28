@@ -21,6 +21,8 @@ public class UI_TrangChu extends JFrame implements ActionListener {
     private CardLayout cardLayout;
     private JPanel pnlBreadcrumb;
     private JLabel lblPageTitle; 
+    private UI_SP uiSanPham;
+    private UI_KH uiKhachHang;
 
     class HiDPIIcon implements Icon {
         private Image image;
@@ -103,7 +105,8 @@ public class UI_TrangChu extends JFrame implements ActionListener {
 
     public UI_TrangChu() {
         setTitle("Hệ Thống Quản Lý - Gia Thành");
-        setSize(1300, 680); 
+        setSize(1300, 680);
+        setMinimumSize(new Dimension(1050, 650));
         setResizable(true);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
@@ -243,7 +246,7 @@ public class UI_TrangChu extends JFrame implements ActionListener {
         pnlNameRole.setBackground(bgWhite);
         JLabel lblName = new JLabel("Nguyễn Văn A");
         lblName.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        JLabel lblRole = new JLabel("Quản trị viên");
+        JLabel lblRole = new JLabel("Quản lý (dữ liệu mẫu)");
         lblRole.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         lblRole.setForeground(textGray);
         pnlNameRole.add(lblName);
@@ -261,13 +264,16 @@ public class UI_TrangChu extends JFrame implements ActionListener {
         pnlCards.setBackground(bgMain);
         
         pnlCards.add(createTongQuanPanel(), "TongQuan"); 
-//        pnlCards.add(new PNL_SanPham(), "SanPham"); 
-//        pnlCards.add(new PNL_KhachHang(), "KhachHang");
-//        pnlCards.add(new PNL_BanHang(), "BanHang");
-//        pnlCards.add(new PNL_KhuyenMai(), "KhuyenMai");
-//        pnlCards.add(new PNL_NhanVien(), "NhanVien");
-//        pnlCards.add(new PNL_HoaDon(), "HoaDon");
-//        pnlCards.add(new PNL_BaoHanh(), "BaoHanh");
+        uiSanPham = new UI_SP();
+        uiKhachHang = new UI_KH();
+        pnlCards.add(uiSanPham, "SanPham");
+        pnlCards.add(uiKhachHang, "KhachHang");
+        pnlCards.add(createEmptyPanel("Chức năng Bán hàng đang được phát triển."), "BanHang");
+        pnlCards.add(createEmptyPanel("Chức năng Khuyến mãi đang được phát triển."), "KhuyenMai");
+        pnlCards.add(createEmptyPanel("Chức năng Nhân viên đang được phát triển."), "NhanVien");
+        pnlCards.add(createEmptyPanel("Chức năng Hóa đơn đang được phát triển."), "HoaDon");
+        pnlCards.add(createEmptyPanel("Chức năng Bảo hành đang được phát triển."), "BaoHanh");
+        pnlCards.add(createEmptyPanel("Chức năng Báo cáo đang được phát triển."), "BaoCao");
         
         
         btnTongQuan.addActionListener(this);
@@ -290,7 +296,7 @@ public class UI_TrangChu extends JFrame implements ActionListener {
         JPanel pnlContent = new JPanel(new BorderLayout());
         pnlContent.setBackground(bgMain);
         
-        JLabel lblHint = new JLabel("Màn hình Tổng quan đang trống. Hãy bấm menu Sản phẩm bên trái!");
+        JLabel lblHint = new JLabel("Chọn Sản phẩm hoặc Khách hàng để thao tác với dữ liệu mẫu. Thay đổi chỉ được lưu trong lần chạy này.");
         lblHint.setHorizontalAlignment(SwingConstants.CENTER);
         lblHint.setForeground(Color.GRAY);
         pnlContent.add(lblHint, BorderLayout.CENTER);
@@ -348,6 +354,8 @@ public class UI_TrangChu extends JFrame implements ActionListener {
         }
         
         cardLayout.show(pnlCards, path[path.length - 1][1]);
+        if (path[path.length - 1][1].equals("SanPham")) uiSanPham.taiLai();
+        if (path[path.length - 1][1].equals("KhachHang")) uiKhachHang.taiLai();
         pnlBreadcrumb.revalidate();
         pnlBreadcrumb.repaint();
         pnlCards.revalidate();
