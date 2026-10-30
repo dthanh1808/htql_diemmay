@@ -261,8 +261,8 @@ public class UI_TrangChu extends JFrame implements ActionListener {
         pnlCards.setBackground(bgMain);
         
         pnlCards.add(createTongQuanPanel(), "TongQuan"); 
-//        pnlCards.add(new PNL_SanPham(), "SanPham"); 
-//        pnlCards.add(new PNL_KhachHang(), "KhachHang");
+        pnlCards.add(new UI_SanPham(), "SanPham"); 
+        pnlCards.add(new UI_KhachHang(), "KhachHang");
 //        pnlCards.add(new PNL_BanHang(), "BanHang");
 //        pnlCards.add(new PNL_KhuyenMai(), "KhuyenMai");
 //        pnlCards.add(new PNL_NhanVien(), "NhanVien");
