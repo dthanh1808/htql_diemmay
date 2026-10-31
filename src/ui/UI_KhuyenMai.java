@@ -6,7 +6,7 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableCellRenderer;
 
-public class PNL_KhuyenMai extends JPanel {
+public class UI_KhuyenMai extends JPanel {
     private Color bgMain = new Color(245, 247, 250);
     private Color bgWhite = Color.WHITE;
     private Color textDark = new Color(30, 30, 30);
@@ -77,7 +77,7 @@ public class PNL_KhuyenMai extends JPanel {
         }
     }
 
-    public PNL_KhuyenMai() {
+    public UI_KhuyenMai() {
         setLayout(new BorderLayout(0, 15));
         setBackground(bgMain);
         setBorder(new EmptyBorder(15, 20, 15, 20));
