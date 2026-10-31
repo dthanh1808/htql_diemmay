@@ -1,11 +1,19 @@
 package ui;
 
 import java.awt.*;
+import java.util.ArrayList;
+import java.util.List;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.MatteBorder;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellRenderer;
+import javax.swing.table.TableRowSorter;
+
+import com.toedter.calendar.JDateChooser;
 
 public class PNL_BaoHanh extends JPanel {
     private Color bgMain = new Color(245, 247, 250);
@@ -14,6 +22,19 @@ public class PNL_BaoHanh extends JPanel {
     private Color textGray = new Color(130, 130, 130);
     private Color colorBlue = new Color(37, 99, 235);
     private Color bgHover = new Color(239, 246, 255);
+
+    // Khai báo các thành phần tương tác lên mức toàn cục
+    private JTextField txtSearch;
+    private JComboBox<String> cbStatus;
+    private JComboBox<String> cbType;
+    private JButton btnReset;
+    private JTable table;
+    private DefaultTableModel tableModel;
+    private TableRowSorter<DefaultTableModel> rowSorter;
+	private JDateChooser txtDate;
+    
+    // Khai báo DAO (Giả lập)
+    // private PhieuBaoHanhDAO phieuBaoHanhDAO = new PhieuBaoHanhDAO();
 
     class RoundedPanel extends JPanel {
         private int cornerRadius;
@@ -41,11 +62,9 @@ public class PNL_BaoHanh extends JPanel {
         public ActionRenderer() {
             setLayout(new FlowLayout(FlowLayout.CENTER, 6, 8));
             setOpaque(true);
-            
             setCustomIcon(lblView, "/icon/ic_xemchitiet.png", 14, 14);
             setCustomIcon(lblEdit, "/icon/ic_chinhsua.png", 14, 14);
             setCustomIcon(lblMore, "/icon/ic_tuychon.png", 14, 14);
-
             add(lblView);
             add(lblEdit);
             add(lblMore);
@@ -68,7 +87,7 @@ public class PNL_BaoHanh extends JPanel {
         setBorder(new EmptyBorder(12, 15, 12, 15));
 
         // =========================================================================
-        // PHẦN BÊN TRÁI: THANH TÌM KIẾM, TAB VÀ BẢNG DANH SÁCH PHIẾU BẢO HÀNH
+        // PHẦN BÊN TRÁI: THANH TÌM KIẾM, TAB VÀ BẢNG DANH SÁCH
         // =========================================================================
         JPanel pnlLeft = new JPanel(new BorderLayout(0, 12));
         pnlLeft.setOpaque(false);
@@ -76,7 +95,7 @@ public class PNL_BaoHanh extends JPanel {
         JPanel pnlLeftNorth = new JPanel(new BorderLayout(0, 12));
         pnlLeftNorth.setOpaque(false);
 
-        // --- 1. THANH TÌM KIẾM & BỘ LỌC PHÍA TRÊN ---
+        // --- 1. THANH TÌM KIẾM & BỘ LỌC ---
         RoundedPanel pnlFilter = new RoundedPanel(12, bgWhite);
         pnlFilter.setLayout(new BorderLayout(8, 0));
         pnlFilter.setBorder(new EmptyBorder(10, 12, 10, 12));
@@ -92,7 +111,7 @@ public class PNL_BaoHanh extends JPanel {
         JLabel lblSearchIcon = new JLabel();
         setCustomIcon(lblSearchIcon, "/icon/ic_timkiem.png", 14, 14);
 
-        JTextField txtSearch = new JTextField(" Tìm mã phiếu, mã đơn hàng...");
+        txtSearch = new JTextField("Tìm mã phiếu, mã đơn hàng...");
         txtSearch.setForeground(textGray);
         txtSearch.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         txtSearch.setBorder(null);
@@ -102,28 +121,47 @@ public class PNL_BaoHanh extends JPanel {
         JPanel pnlFilterControls = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         pnlFilterControls.setOpaque(false);
 
-        JComboBox<String> cbStatus = new JComboBox<>(new String[]{
+        cbStatus = new JComboBox<>(new String[]{
             "Trạng thái: Tất cả", "Đang xử lý", "Đã hoàn thành", "Từ chối"
         });
         cbStatus.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         cbStatus.setBackground(Color.WHITE);
         cbStatus.setPreferredSize(new Dimension(135, 32));
 
-        JComboBox<String> cbType = new JComboBox<>(new String[]{
+        cbType = new JComboBox<>(new String[]{
             "Loại: Tất cả", "Bảo hành phần cứng", "Bảo hành phần mềm"
         });
         cbType.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         cbType.setBackground(Color.WHITE);
         cbType.setPreferredSize(new Dimension(145, 32));
 
-        JTextField txtDate = new JTextField(" 📅 Chọn ngày");
+        txtDate = new JDateChooser();
+        txtDate.setDateFormatString("dd/MM/yyyy");
+        txtDate.setPreferredSize(new Dimension(130, 32));
         txtDate.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        txtDate.setForeground(textGray);
-        txtDate.setPreferredSize(new Dimension(120, 32));
+        
+        btnReset = new JButton("Làm mới");
+        btnReset.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        btnReset.setBackground(new Color(240, 242, 245));
+        btnReset.setForeground(textDark);
+        btnReset.setBorder(BorderFactory.createLineBorder(new Color(210, 214, 220)));
+        btnReset.setFocusPainted(false);
+        btnReset.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnReset.setPreferredSize(new Dimension(80, 32));
+        
+        btnReset = new JButton("Làm mới");
+        btnReset.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        btnReset.setBackground(new Color(240, 242, 245));
+        btnReset.setForeground(textDark);
+        btnReset.setBorder(BorderFactory.createLineBorder(new Color(210, 214, 220)));
+        btnReset.setFocusPainted(false);
+        btnReset.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnReset.setPreferredSize(new Dimension(80, 32));
 
         pnlFilterControls.add(cbStatus);
         pnlFilterControls.add(cbType);
         pnlFilterControls.add(txtDate);
+        pnlFilterControls.add(btnReset);
 
         pnlFilter.add(pnlSearchBox, BorderLayout.CENTER);
         pnlFilter.add(pnlFilterControls, BorderLayout.EAST);
@@ -131,7 +169,7 @@ public class PNL_BaoHanh extends JPanel {
 
         pnlLeft.add(pnlLeftNorth, BorderLayout.NORTH);
 
-        // --- 2. BẢNG DANH SÁCH PHIẾU BẢO HÀNH KÈM TAB CHUYỂN ĐỔI ---
+        // --- 2. BẢNG DANH SÁCH ---
         RoundedPanel pnlTableContainer = new RoundedPanel(12, bgWhite);
         pnlTableContainer.setLayout(new BorderLayout(0, 10));
         pnlTableContainer.setBorder(new EmptyBorder(12, 12, 12, 12));
@@ -158,30 +196,16 @@ public class PNL_BaoHanh extends JPanel {
         pnlTabs.add(lblTab2);
         pnlTableContainer.add(pnlTabs, BorderLayout.NORTH);
 
-        // Đã đổi cột đầu tiên từ Checkbox thành STT
+        // Khởi tạo Model và Sorter cho Table
         String[] columns = {"STT", "Mã phiếu", "Ngày tạo", "Khách hàng", "Sản phẩm", "Loại bảo hành", "Trạng thái", "Thao tác"};
-
-        String tagDangXuLy = "<html><span style='background-color:#ffedd5; color:#ea580c; padding:3px 8px; border-radius:10px; font-size:10px;'>● Đang xử lý</span></html>";
-        String tagHoanThanh = "<html><span style='background-color:#dcfce7; color:#16a34a; padding:3px 8px; border-radius:10px; font-size:10px;'>● Đã hoàn thành</span></html>";
-        String tagTuChoi = "<html><span style='background-color:#fee2e2; color:#dc2626; padding:3px 8px; border-radius:10px; font-size:10px;'>● Từ chối</span></html>";
-
-        Object[][] data = {
-            {"1", "BH00018", "27/10/2026", "Nguyễn Thị Lan", "Điện thoại XYZ", "Bảo hành phần cứng", tagDangXuLy, ""},
-            {"2", "BH00017", "26/10/2026", "Trần Văn Hùng", "Laptop ABC", "Bảo hành phần cứng", tagDangXuLy, ""},
-            {"3", "BH00016", "25/10/2026", "Lê Thị Mai", "Tai nghe TWS", "Bảo hành phần mềm", tagHoanThanh, ""},
-            {"4", "BH00015", "24/10/2026", "Phạm Văn Dũng", "Smartwatch GT", "Bảo hành phần cứng", tagHoanThanh, ""},
-            {"5", "BH00014", "23/10/2026", "Hoàng Thị Bích", "Điện thoại XYZ", "Bảo hành phần cứng", tagDangXuLy, ""},
-            {"6", "BH00013", "22/10/2026", "Nguyễn Minh Anh", "Laptop ABC", "Bảo hành phần mềm", tagHoanThanh, ""},
-            {"7", "BH00012", "21/10/2026", "Vũ Đức Long", "Tai nghe TWS", "Bảo hành phần mềm", tagTuChoi, ""},
-            {"8", "BH00011", "20/10/2026", "Đỗ Thị Hương", "Smartwatch GT", "Bảo hành phần cứng", tagHoanThanh, ""},
-            {"9", "BH00010", "19/10/2026", "Ngô Văn Phúc", "Điện thoại XYZ", "Bảo hành phần cứng", tagDangXuLy, ""},
-            {"10", "BH00009", "18/10/2026", "Lý Thị Quyên", "Laptop ABC", "Bảo hành phần cứng", tagHoanThanh, ""}
-        };
-
-        JTable table = new JTable(data, columns) {
+        tableModel = new DefaultTableModel(columns, 0) {
             @Override
             public boolean isCellEditable(int row, int column) { return false; }
         };
+        
+        table = new JTable(tableModel);
+        rowSorter = new TableRowSorter<>(tableModel);
+        table.setRowSorter(rowSorter);
 
         table.setRowHeight(36);
         table.setShowVerticalLines(false);
@@ -200,15 +224,14 @@ public class PNL_BaoHanh extends JPanel {
         centerRenderer.setHorizontalAlignment(JLabel.CENTER);
         table.getColumnModel().getColumn(0).setCellRenderer(centerRenderer);
 
-        table.getColumnModel().getColumn(0).setPreferredWidth(35);  // STT
-        table.getColumnModel().getColumn(1).setPreferredWidth(75);  // Mã phiếu
-        table.getColumnModel().getColumn(2).setPreferredWidth(85);  // Ngày tạo
-        table.getColumnModel().getColumn(3).setPreferredWidth(115); // Khách hàng
-        table.getColumnModel().getColumn(4).setPreferredWidth(105); // Sản phẩm
-        table.getColumnModel().getColumn(5).setPreferredWidth(125); // Loại bảo hành
-        table.getColumnModel().getColumn(6).setPreferredWidth(110); // Trạng thái
-        table.getColumnModel().getColumn(7).setPreferredWidth(75);  // Thao tác
-
+        table.getColumnModel().getColumn(0).setPreferredWidth(35);
+        table.getColumnModel().getColumn(1).setPreferredWidth(75);
+        table.getColumnModel().getColumn(2).setPreferredWidth(85);
+        table.getColumnModel().getColumn(3).setPreferredWidth(115);
+        table.getColumnModel().getColumn(4).setPreferredWidth(105);
+        table.getColumnModel().getColumn(5).setPreferredWidth(125);
+        table.getColumnModel().getColumn(6).setPreferredWidth(110);
+        table.getColumnModel().getColumn(7).setPreferredWidth(75);
         table.getColumnModel().getColumn(7).setCellRenderer(new ActionRenderer());
 
         JScrollPane scrollTable = new JScrollPane(table);
@@ -216,48 +239,23 @@ public class PNL_BaoHanh extends JPanel {
         scrollTable.getViewport().setBackground(bgWhite);
         pnlTableContainer.add(scrollTable, BorderLayout.CENTER);
 
-        // Phân trang
+        // Gọi hàm giả lập load dữ liệu
+        loadDataToTable();
+
         JPanel pnlPagination = new JPanel(new BorderLayout());
         pnlPagination.setBackground(bgWhite);
         pnlPagination.setBorder(new EmptyBorder(8, 0, 0, 0));
 
-        JLabel lblInfo = new JLabel("Hiển thị 1–10 trên 28 phiếu bảo hành");
+        JLabel lblInfo = new JLabel("Hiển thị kết quả tìm kiếm...");
         lblInfo.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         lblInfo.setForeground(textGray);
         pnlPagination.add(lblInfo, BorderLayout.WEST);
-
-        JPanel pnlPages = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
-        pnlPages.setBackground(bgWhite);
-
-        String[] pages = {"<", "1", "2", "3", ">"};
-        for (String p : pages) {
-            JButton btnPage = new JButton(p);
-            btnPage.setFocusPainted(false);
-            btnPage.setPreferredSize(new Dimension(26, 26));
-            btnPage.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-            btnPage.setMargin(new Insets(0, 0, 0, 0));
-            btnPage.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
-            if (p.equals("1")) {
-                btnPage.setBackground(colorBlue);
-                btnPage.setForeground(Color.WHITE);
-                btnPage.setBorderPainted(false);
-            } else {
-                btnPage.setBackground(bgWhite);
-                btnPage.setForeground(textDark);
-                btnPage.setBorder(BorderFactory.createLineBorder(new Color(210, 210, 210)));
-            }
-            pnlPages.add(btnPage);
-        }
-
-        pnlPagination.add(pnlPages, BorderLayout.EAST);
-        pnlTableContainer.add(pnlPagination, BorderLayout.SOUTH);
 
         pnlLeft.add(pnlTableContainer, BorderLayout.CENTER);
         add(pnlLeft, BorderLayout.CENTER);
 
         // =========================================================================
-        // PHẦN BÊN PHẢI: CHI TIẾT PHIẾU BẢO HÀNH
+        // PHẦN BÊN PHẢI: CHI TIẾT
         // =========================================================================
         RoundedPanel pnlRight = new RoundedPanel(12, bgWhite);
         pnlRight.setPreferredSize(new Dimension(280, 0));
@@ -286,7 +284,7 @@ public class PNL_BaoHanh extends JPanel {
         JPanel pnlBHCard = new JPanel(new BorderLayout());
         pnlBHCard.setBackground(new Color(248, 250, 252));
         pnlBHCard.setBorder(new EmptyBorder(6, 8, 6, 8));
-        JLabel lblBHId = new JLabel("BH00018");
+        JLabel lblBHId = new JLabel("BH00018"); // Có thể đổi thành biến toàn cục để update
         lblBHId.setFont(new Font("Segoe UI", Font.BOLD, 11));
         lblBHId.setForeground(colorBlue);
         setCustomIcon(lblBHId, "/icon/ic_hoadon.png", 13, 13);
@@ -316,7 +314,7 @@ public class PNL_BaoHanh extends JPanel {
         pnlDetailContent.add(Box.createVerticalStrut(6));
 
         pnlDetailContent.add(createDetailSectionHeader("Mô tả sự cố", "/icon/ic_baohanh.png"));
-        JLabel lblIssueText = new JLabel("<html><span style='color:#333333; font-size:9px;'>Máy không lên nguồn, đã kiểm tra sơ bộ và xác định lỗi main. Cần gửi hãng kiểm tra.</span></html>");
+        JLabel lblIssueText = new JLabel("<html><span style='color:#333333; font-size:9px;'>Máy không lên nguồn, đã kiểm tra sơ bộ và xác định lỗi main.</span></html>");
         JPanel pnlIssue = new JPanel(new BorderLayout());
         pnlIssue.setBackground(new Color(248, 250, 252));
         pnlIssue.setBorder(new EmptyBorder(5, 5, 5, 5));
@@ -356,6 +354,118 @@ public class PNL_BaoHanh extends JPanel {
         pnlRight.add(pnlDetailBottom, BorderLayout.SOUTH);
 
         add(pnlRight, BorderLayout.EAST);
+        
+        // =========================================================================
+        // THÊM SỰ KIỆN (LISTENERS)
+        // =========================================================================
+        setupListeners();
+    }
+    
+    private void setupListeners() {
+        // 1. Sự kiện gõ tìm kiếm real-time
+        txtSearch.getDocument().addDocumentListener(new DocumentListener() {
+            public void insertUpdate(DocumentEvent e) { filterData(); }
+            public void removeUpdate(DocumentEvent e) { filterData(); }
+            public void changedUpdate(DocumentEvent e) { filterData(); }
+        });
+
+        // 2. Xóa placeholder khi click vào ô search
+        txtSearch.addFocusListener(new java.awt.event.FocusAdapter() {
+            public void focusGained(java.awt.event.FocusEvent evt) {
+                if (txtSearch.getText().trim().equals("Tìm mã phiếu, mã đơn hàng...")) {
+                    txtSearch.setText("");
+                    txtSearch.setForeground(textDark);
+                }
+            }
+            public void focusLost(java.awt.event.FocusEvent evt) {
+                if (txtSearch.getText().trim().isEmpty()) {
+                    txtSearch.setForeground(textGray);
+                    txtSearch.setText("Tìm mã phiếu, mã đơn hàng...");
+                }
+            }
+        });
+        
+        txtDate.addPropertyChangeListener("date", evt -> filterData());
+
+        // 3. Sự kiện lọc qua ComboBox
+        cbStatus.addActionListener(e -> filterData());
+        cbType.addActionListener(e -> filterData());
+
+        // 4. Sự kiện nút Làm mới
+        btnReset.addActionListener(e -> {
+            txtSearch.setText("Tìm mã phiếu, mã đơn hàng...");
+            txtSearch.setForeground(textGray);
+            cbStatus.setSelectedIndex(0);
+            cbType.setSelectedIndex(0);
+            rowSorter.setRowFilter(null); // Hủy toàn bộ lọc
+        });
+
+        // 5. Sự kiện Click dòng trên Table để xem chi tiết
+        table.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting() && table.getSelectedRow() != -1) {
+                int viewRow = table.getSelectedRow();
+                int modelRow = table.convertRowIndexToModel(viewRow);
+                String maPhieu = tableModel.getValueAt(modelRow, 1).toString();
+                
+                // TODO: Dùng maPhieu gọi phieuBaoHanhDAO.getChiTiet(maPhieu) 
+                // và setText() cho các Label ở Panel bên phải.
+                System.out.println("Đang xem chi tiết mã: " + maPhieu);
+            }
+        });
+    }
+
+    private void loadDataToTable() {
+        tableModel.setRowCount(0); 
+        
+        // Dữ liệu giả lập (thực tế sẽ gọi từ phieuBaoHanhDAO.getAll())
+        String tagDangXuLy = "<html><span style='background-color:#ffedd5; color:#ea580c; padding:3px 8px; border-radius:10px; font-size:10px;'>● Đang xử lý</span></html>";
+        String tagHoanThanh = "<html><span style='background-color:#dcfce7; color:#16a34a; padding:3px 8px; border-radius:10px; font-size:10px;'>● Đã hoàn thành</span></html>";
+        String tagTuChoi = "<html><span style='background-color:#fee2e2; color:#dc2626; padding:3px 8px; border-radius:10px; font-size:10px;'>● Từ chối</span></html>";
+
+        Object[][] mockData = {
+            {"1", "BH00018", "27/10/2026", "Nguyễn Thị Lan", "Điện thoại XYZ", "Bảo hành phần cứng", tagDangXuLy, ""},
+            {"2", "BH00017", "26/10/2026", "Trần Văn Hùng", "Laptop ABC", "Bảo hành phần cứng", tagDangXuLy, ""},
+            {"3", "BH00016", "25/10/2026", "Lê Thị Mai", "Tai nghe TWS", "Bảo hành phần mềm", tagHoanThanh, ""},
+            {"4", "BH00015", "24/10/2026", "Phạm Văn Dũng", "Smartwatch GT", "Bảo hành phần cứng", tagHoanThanh, ""},
+            {"5", "BH00012", "21/10/2026", "Vũ Đức Long", "Tai nghe TWS", "Bảo hành phần mềm", tagTuChoi, ""}
+        };
+
+        for (Object[] row : mockData) {
+            tableModel.addRow(row);
+        }
+    }
+
+    private void filterData() {
+        String text = txtSearch.getText().trim();
+        if (text.equals("Tìm mã phiếu, mã đơn hàng...")) {
+            text = "";
+        }
+        
+        List<RowFilter<Object, Object>> filters = new ArrayList<>();
+        
+        if (!text.isEmpty()) {
+            filters.add(RowFilter.regexFilter("(?i)" + text)); 
+        }
+        if (cbStatus.getSelectedIndex() > 0) {
+            String status = cbStatus.getSelectedItem().toString();
+            filters.add(RowFilter.regexFilter("(?i)" + status, 6)); // Lọc cột Trạng thái
+        }
+        if (cbType.getSelectedIndex() > 0) {
+            String type = cbType.getSelectedItem().toString();
+            filters.add(RowFilter.regexFilter("(?i)" + type, 5)); // Lọc cột Loại bảo hành
+        }
+        
+        if (txtDate.getDate() != null) {
+            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("dd/MM/yyyy");
+            String dateStr = sdf.format(txtDate.getDate());
+            filters.add(RowFilter.regexFilter("(?i)" + dateStr, 2)); // Cột 2 là Ngày tạo
+        }
+        
+        if (filters.isEmpty()) {
+            rowSorter.setRowFilter(null);
+        } else {
+            rowSorter.setRowFilter(RowFilter.andFilter(filters));
+        }
     }
 
     private void setCustomIcon(JLabel label, String iconPath, int width, int height) {
@@ -394,18 +504,14 @@ public class PNL_BaoHanh extends JPanel {
     private JPanel createInlineNoteRow(String title, String iconPath, String noteText) {
         JPanel pnl = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 2));
         pnl.setOpaque(false);
-        
         JLabel lblIcon = new JLabel();
         setCustomIcon(lblIcon, iconPath, 12, 12);
-        
         JLabel lblTitle = new JLabel(title + ":");
         lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 10));
         lblTitle.setForeground(colorBlue);
-        
         JLabel lblText = new JLabel(noteText);
         lblText.setFont(new Font("Segoe UI", Font.PLAIN, 10));
         lblText.setForeground(textDark);
-
         pnl.add(lblIcon);
         pnl.add(lblTitle);
         pnl.add(lblText);
