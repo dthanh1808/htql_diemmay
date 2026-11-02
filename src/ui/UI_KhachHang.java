@@ -893,4 +893,6 @@ public class UI_KhachHang extends JPanel {
         if (Files.exists(path)) confirm("Ghi đè file?", "File " + path.getFileName() + " đã tồn tại. Ghi đè nội dung hiện có?", "Ghi đè file", 2, save, () -> showView("list"));
         else save.run();
     }
+    
+
 }
