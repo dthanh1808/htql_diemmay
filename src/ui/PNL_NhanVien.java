@@ -18,7 +18,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
-import java.sql.SQLException;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -140,11 +139,18 @@ public class PNL_NhanVien extends JPanel implements ActionListener, MouseListene
 
 	public PNL_NhanVien() {
 
-		try {
-			ConnectDB.getInstance().connect();
+//		try {
+//			ConnectDB.getInstance();
+//			System.out.println("Connected!!!!");
+//		} catch (SQLException e) {
+//			e.printStackTrace();
+//		}
+
+		ConnectDB.getInstance();
+		if (ConnectDB.getConnection() != null) {
 			System.out.println("Connected!!!!");
-		} catch (SQLException e) {
-			e.printStackTrace();
+		} else {
+			System.out.println("Kết nối database thất bại!");
 		}
 
 		nv_dao = new NhanVien_DAO();
