@@ -23,6 +23,8 @@
 hs_err_pid*
 replay_pid*
 
+/bin/
+
 # Dữ liệu giao dịch và tệp kiểm thử cục bộ
 data/
 build/
