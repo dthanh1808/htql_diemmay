@@ -13,15 +13,18 @@ public class NhanVien {
 	private LocalDate ngaySinh;
 	private String diachi;
 	private String chucVu;
-	private boolean trangThai; // true: Đang làm việc, false: Nghỉ việc/Tạm nghỉ
+	private String trangThai; // true: Đang làm việc, false: Nghỉ việc/Tạm nghỉ
 	private Date ngayVaoLam;
 	private TaiKhoan taiKhoan;
+	private String anhDaiDien;
+	private String ghiChu;
 
 	public NhanVien() {
 	}
 
 	public NhanVien(String maNV, String hoTen, boolean gioiTinh, String sdt, String email, LocalDate ngaySinh,
-			String diachi, String chucVu, boolean trangThai, Date ngayVaoLam, TaiKhoan taiKhoan) {
+			String diachi, String chucVu, String trangThai, Date ngayVaoLam, TaiKhoan taiKhoan, String anhDaiDien,
+			String ghiChu) {
 		super();
 		setMaNV(maNV);
 		setHoTen(hoTen);
@@ -34,6 +37,8 @@ public class NhanVien {
 		this.trangThai = trangThai;
 		this.ngayVaoLam = ngayVaoLam;
 		this.taiKhoan = taiKhoan;
+		this.anhDaiDien = anhDaiDien;
+		this.ghiChu = ghiChu;
 	}
 
 	public String getMaNV() {
@@ -116,11 +121,11 @@ public class NhanVien {
 		this.chucVu = chucVu;
 	}
 
-	public boolean isTrangThai() {
+	public String getTrangThai() {
 		return trangThai;
 	}
 
-	public void setTrangThai(boolean trangThai) {
+	public void setTrangThai(String trangThai) {
 		this.trangThai = trangThai;
 	}
 
@@ -140,11 +145,28 @@ public class NhanVien {
 		this.taiKhoan = taiKhoan;
 	}
 
+	public String getAnhDaiDien() {
+		return anhDaiDien;
+	}
+
+	public void setAnhDaiDien(String anhDaiDien) {
+		this.anhDaiDien = anhDaiDien;
+	}
+
+	public String getGhiChu() {
+		return ghiChu;
+	}
+
+	public void setGhiChu(String ghiChu) {
+		this.ghiChu = ghiChu;
+	}
+
 	@Override
 	public String toString() {
 		return "NhanVien [maNV=" + maNV + ", hoTen=" + hoTen + ", gioiTinh=" + gioiTinh + ", sdt=" + sdt + ", email="
 				+ email + ", ngaySinh=" + ngaySinh + ", diachi=" + diachi + ", chucVu=" + chucVu + ", trangThai="
-				+ trangThai + ", ngayVaoLam=" + ngayVaoLam + ", taiKhoan=" + taiKhoan + "]";
+				+ trangThai + ", ngayVaoLam=" + ngayVaoLam + ", taiKhoan=" + taiKhoan + ", anhDaiDien=" + anhDaiDien
+				+ ", ghiChu=" + ghiChu + "]";
 	}
 
 	@Override
