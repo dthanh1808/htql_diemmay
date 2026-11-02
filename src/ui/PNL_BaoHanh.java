@@ -17,8 +17,10 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableRowSorter;
 
-// Cần add thư viện jcalendar-1.4.jar vào project
 import com.toedter.calendar.JDateChooser;
+
+import dao.PhieuBaoHanh_DAO;
+import entity.PhieuBaoHanh;
 
 public class PNL_BaoHanh extends JPanel {
     private Color bgMain = new Color(245, 247, 250);
@@ -28,7 +30,6 @@ public class PNL_BaoHanh extends JPanel {
     private Color colorBlue = new Color(37, 99, 235);
     private Color bgHover = new Color(239, 246, 255);
 
-    // CardLayout nội bộ để chuyển đổi giữa Danh sách và Form Lập phiếu
     private CardLayout cardLayout;
     private JPanel pnlCardContainer;
 
@@ -36,7 +37,6 @@ public class PNL_BaoHanh extends JPanel {
     private DefaultTableModel tableModel;
     private TableRowSorter<DefaultTableModel> rowSorter;
 
-    // Các thành phần bộ lọc
     private JTextField txtSearch;
     private JComboBox<String> cbStatus;
     private JComboBox<String> cbType;
@@ -62,7 +62,6 @@ public class PNL_BaoHanh extends JPanel {
         }
     }
 
-    // 1. ActionRenderer
     class ActionRenderer extends JPanel implements TableCellRenderer {
         private JButton btnView = new JButton("Xem");
         private JButton btnEdit = new JButton("Sửa");
@@ -83,7 +82,6 @@ public class PNL_BaoHanh extends JPanel {
         }
     }
 
-    // 2. ActionEditor
     class ActionEditor extends DefaultCellEditor {
         private JPanel panel;
         private JButton btnView;
@@ -127,26 +125,17 @@ public class PNL_BaoHanh extends JPanel {
         setBackground(bgMain);
         setBorder(new EmptyBorder(12, 15, 12, 15));
 
-        // Khởi tạo CardLayout chứa 2 màn hình bên trong PNL_BaoHanh
         cardLayout = new CardLayout();
         pnlCardContainer = new JPanel(cardLayout);
         pnlCardContainer.setOpaque(false);
 
-        // Thêm Card 1: Giao diện Danh sách
         pnlCardContainer.add(createDanhSachPanel(), "DANH_SACH");
-
-        // Thêm Card 2: Giao diện Lập phiếu bảo hành
         pnlCardContainer.add(createLapPhieuPanel(), "LAP_PHIEU");
 
         add(pnlCardContainer, BorderLayout.CENTER);
-        
-        // Mặc định hiển thị danh sách khi vừa vào panel
         cardLayout.show(pnlCardContainer, "DANH_SACH");
     }
 
-    // =========================================================================
-    // TẠO GIAO DIỆN CARD 1: DANH SÁCH & BỘ LỌC
-    // =========================================================================
     private JPanel createDanhSachPanel() {
         JPanel pnlDanhSach = new JPanel(new BorderLayout(0, 12));
         pnlDanhSach.setOpaque(false);
@@ -213,7 +202,6 @@ public class PNL_BaoHanh extends JPanel {
         pnlFilter.add(pnlFilterControls, BorderLayout.EAST); 
         pnlMainNorth.add(pnlFilter, BorderLayout.NORTH);
 
-        // Nút Tạo phiếu bảo hành (Xanh dương, căn trái)
         JPanel pnlActions = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0)); 
         pnlActions.setOpaque(false);
         
@@ -221,14 +209,12 @@ public class PNL_BaoHanh extends JPanel {
         btnCreate.setPreferredSize(new Dimension(160, 36));
         btnCreate.setFont(new Font("Segoe UI", Font.BOLD, 13));
         
-        // Sự kiện: Chuyển sang Card Lập phiếu ngay trong panel này
         btnCreate.addActionListener(e -> cardLayout.show(pnlCardContainer, "LAP_PHIEU"));
 
         pnlActions.add(btnCreate);
         pnlMainNorth.add(pnlActions, BorderLayout.CENTER); 
         pnlDanhSach.add(pnlMainNorth, BorderLayout.NORTH);
 
-        // Sự kiện lọc
         txtSearch.getDocument().addDocumentListener(new DocumentListener() {
             public void insertUpdate(DocumentEvent e) { applyFilters(); }
             public void removeUpdate(DocumentEvent e) { applyFilters(); }
@@ -273,7 +259,6 @@ public class PNL_BaoHanh extends JPanel {
             }
         });
 
-        // Bảng danh sách
         RoundedPanel pnlTableContainer = new RoundedPanel(12, bgWhite);
         pnlTableContainer.setLayout(new BorderLayout(0, 10));
         pnlTableContainer.setBorder(new EmptyBorder(12, 12, 12, 12));
@@ -357,9 +342,6 @@ public class PNL_BaoHanh extends JPanel {
         return pnlDanhSach;
     }
 
-    // =========================================================================
-    // TẠO GIAO DIỆN CARD 2: MÀN HÌNH LẬP PHIẾU (ĐÃ FIX KHÓA THÔNG TIN & BỎ TRẠNG THÁI)
-    // =========================================================================
     private JPanel createLapPhieuPanel() {
         RoundedPanel pnlLapPhieu = new RoundedPanel(12, bgWhite);
         pnlLapPhieu.setLayout(new BorderLayout(0, 15));
@@ -374,7 +356,6 @@ public class PNL_BaoHanh extends JPanel {
         pnlBody.setLayout(new BoxLayout(pnlBody, BoxLayout.Y_AXIS));
         pnlBody.setBackground(bgWhite);
 
-        // --- BƯỚC 1: XÁC THỰC ---
         JPanel pnlVerifyCard = new JPanel(new BorderLayout(0, 10));
         pnlVerifyCard.setBackground(new Color(248, 250, 252));
         pnlVerifyCard.setBorder(BorderFactory.createCompoundBorder(
@@ -408,7 +389,6 @@ public class PNL_BaoHanh extends JPanel {
         pnlBody.add(pnlVerifyCard);
         pnlBody.add(Box.createVerticalStrut(15));
 
-        // --- BƯỚC 2: THÔNG TIN CHI TIẾT (KHÓA DỮ LIỆU ĐỌC TỪ HÓA ĐƠN, CHỈ CHO CHỌN LOẠI BH VÀ NHẬP MÔ TẢ) ---
         JPanel pnlFormCard = new JPanel();
         pnlFormCard.setLayout(new BoxLayout(pnlFormCard, BoxLayout.Y_AXIS));
         pnlFormCard.setBackground(bgWhite);
@@ -421,32 +401,30 @@ public class PNL_BaoHanh extends JPanel {
             textDark
         ));
 
-        // Các trường thông tin (Sẽ bị khóa không cho sửa trực tiếp, load tự động theo hóa đơn)
+        // Các thông tin cố định load từ hóa đơn (Khóa không cho chỉnh sửa)
         JTextField txtTenKH = createReadOnlyTextField("");
         JTextField txtSDT = createReadOnlyTextField("");
         JTextField txtDiaChi = createReadOnlyTextField("");
-        
         JTextField txtSanPham = createReadOnlyTextField("");
         JTextField txtMaSP = createReadOnlyTextField("");
         JTextField txtIMEI = createReadOnlyTextField("");
         
-        // Loại bảo hành (Cho phép nhân viên chọn)
+        // Loại bảo hành (Nhân viên được chọn)
         JComboBox<String> cbLoaiBH = new JComboBox<>(new String[]{"Bảo hành phần cứng", "Bảo hành phần mềm"});
         styleComboBox(cbLoaiBH);
-        cbLoaiBH.setEnabled(false); // Ban đầu khóa
+        cbLoaiBH.setEnabled(false);
 
-        // Mô tả / Ghi chú (Cho phép nhân viên nhập)
+        // Mô tả sự cố (Nhân viên được nhập)
         JTextArea txtMoTa = new JTextArea();
         txtMoTa.setLineWrap(true);
         txtMoTa.setWrapStyleWord(true);
         txtMoTa.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         txtMoTa.setBackground(new Color(245, 247, 250));
-        txtMoTa.setEditable(false); // Ban đầu khóa
+        txtMoTa.setEditable(false);
         txtMoTa.setBorder(BorderFactory.createLineBorder(new Color(220, 224, 230)));
         JScrollPane scrollMoTa = new JScrollPane(txtMoTa);
         scrollMoTa.setPreferredSize(new Dimension(0, 65));
 
-        // Thêm vào Form theo từng nhóm giống giao diện Chi tiết
         pnlFormCard.add(createDetailSectionHeader("Thông tin khách hàng", "/icon/ic_khachhang.png"));
         pnlFormCard.add(createFieldRow("Tên KH:", txtTenKH));
         pnlFormCard.add(createFieldRow("SĐT:", txtSDT));
@@ -479,7 +457,6 @@ public class PNL_BaoHanh extends JPanel {
         pnlBody.add(scrollForm);
         pnlLapPhieu.add(pnlBody, BorderLayout.CENTER);
 
-        // --- NÚT HÀNH ĐỘNG DƯỚI CÙNG ---
         JPanel pnlBottom = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         pnlBottom.setBackground(bgWhite);
 
@@ -487,10 +464,8 @@ public class PNL_BaoHanh extends JPanel {
         JButton btnCreateTicket = createFlatButton("Tạo phiếu", new Color(22, 163, 74), Color.WHITE, new Color(22, 163, 74));
         btnCreateTicket.setEnabled(false);
 
-        // Sự kiện Quay lại danh sách
         btnBack.addActionListener(e -> cardLayout.show(pnlCardContainer, "DANH_SACH"));
 
-        // Sự kiện Kiểm tra (Bước 1) -> Load thông tin lên và mở khóa Loại BH + Mô tả
         btnCheck.addActionListener(e -> {
             String key = txtInputKey.getText().trim();
             if (key.isEmpty()) {
@@ -505,9 +480,9 @@ public class PNL_BaoHanh extends JPanel {
                 txtMoTa.setBackground(new Color(245, 247, 250));
                 btnCreateTicket.setEnabled(false);
             } else {
-                lblCheckResult.setText("<html><span style='color:#16a34a;'>Sản phẩm còn hạn bảo hành.</span></html>");
+                lblCheckResult.setText("<html><span style='color:#16a34a;'>Sản phẩm còn hạn bảo hành. Đã load thông tin từ hóa đơn!</span></html>");
                 
-                // Load dữ liệu tự động (Không cho sửa)
+                // Load dữ liệu hóa đơn lên các ô read-only
                 txtTenKH.setText("Nguyễn Văn A");
                 txtSDT.setText("0912345678");
                 txtDiaChi.setText("123 Nguyễn Văn Cừ, Q.5, TP.HCM");
@@ -515,24 +490,40 @@ public class PNL_BaoHanh extends JPanel {
                 txtMaSP.setText("SP0012");
                 txtIMEI.setText("356789012345678");
 
-                // Mở khóa phần nhân viên được phép thao tác
+                // Mở khóa phần nhân viên chọn loại BH và nhập mô tả
                 cbLoaiBH.setEnabled(true);
                 txtMoTa.setEditable(true);
                 txtMoTa.setBackground(Color.WHITE);
-                txtMoTa.setText(""); // Để trống cho nhân viên tự nhập mô tả lỗi
+                txtMoTa.setText(""); 
 
                 btnCreateTicket.setEnabled(true);
             }
         });
 
-        // Sự kiện Tạo phiếu
         btnCreateTicket.addActionListener(e -> {
             if (txtMoTa.getText().trim().isEmpty()) {
                 JOptionPane.showMessageDialog(pnlLapPhieu, "Vui lòng nhập mô tả sự cố bảo hành!", "Cảnh báo", JOptionPane.WARNING_MESSAGE);
                 return;
             }
-            JOptionPane.showMessageDialog(pnlLapPhieu, "Lập phiếu bảo hành thành công!", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
-            cardLayout.show(pnlCardContainer, "DANH_SACH"); // Quay về danh sách
+
+            PhieuBaoHanh_DAO dao = new PhieuBaoHanh_DAO();
+            
+            PhieuBaoHanh phieu = new PhieuBaoHanh();
+            phieu.setMaPhieu(dao.phatSinhMaPhieuMoi()); // Tự sinh mã phiếu tự động
+            phieu.setSoSerial("356789012345678");       // Lấy từ thông tin serial đã check ở bước 1
+            phieu.setLoaiBaoHanh(cbLoaiBH.getSelectedItem().toString());
+            phieu.setNgayTiepNhan(new java.util.Date());
+            phieu.setGhiChu(txtMoTa.getText().trim());
+            phieu.setTrangThai("Đang xử lý");
+            
+            boolean thanhCong = dao.themPhieuBaoHanh(phieu);
+            if (thanhCong) {
+                JOptionPane.showMessageDialog(pnlLapPhieu, "Lập phiếu bảo hành thành công!", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+                cardLayout.show(pnlCardContainer, "DANH_SACH"); 
+                // Gọi lại hàm load dữ liệu lên bảng nếu cần thiết
+            } else {
+                JOptionPane.showMessageDialog(pnlLapPhieu, "Lưu phiếu thất bại vào CSDL!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            }
         });
 
         pnlBottom.add(btnBack);
@@ -542,9 +533,6 @@ public class PNL_BaoHanh extends JPanel {
         return pnlLapPhieu;
     }
 
-    // =========================================================================
-    // HÀM XỬ LÝ LỌC
-    // =========================================================================
     private void applyFilters() {
         if (rowSorter == null) return;
         
@@ -601,9 +589,6 @@ public class PNL_BaoHanh extends JPanel {
         }
     }
 
-    // =========================================================================
-    // HÀM HIỂN THỊ POPUP CHI TIẾT
-    // =========================================================================
     private void hienThiChiTiet(int row, boolean startInEditMode) {
         int modelRow = table.convertRowIndexToModel(row);
 
@@ -674,7 +659,7 @@ public class PNL_BaoHanh extends JPanel {
         JScrollPane scrollNote = new JScrollPane(txtGhiChu);
         scrollNote.setPreferredSize(new Dimension(0, 60));
         pnlNote.add(scrollNote, BorderLayout.CENTER);
-        pnlContent.add(pnlNote);
+        pnlContent.add(scrollNote);
 
         pnlWrap.add(pnlContent, BorderLayout.CENTER);
 
@@ -726,9 +711,6 @@ public class PNL_BaoHanh extends JPanel {
         dialog.setVisible(true); 
     }
 
-    // =========================================================================
-    // HÀM TIỆN ÍCH DÙNG CHUNG
-    // =========================================================================
     private JButton createFlatButton(String text, Color bg, Color fg, Color border) {
         JButton btn = new JButton(text) {
             @Override
@@ -781,7 +763,6 @@ public class PNL_BaoHanh extends JPanel {
         return txt;
     }
 
-    // Tạo TextField ở trạng thái chỉ đọc (Read-only) cho form Lập phiếu
     private JTextField createReadOnlyTextField(String text) {
         JTextField txt = new JTextField(text);
         txt.setFont(new Font("Segoe UI", Font.PLAIN, 12));

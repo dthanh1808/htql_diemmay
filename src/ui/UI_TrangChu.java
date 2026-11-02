@@ -14,13 +14,14 @@ public class UI_TrangChu extends JFrame implements ActionListener {
     private Color colorBlue = new Color(37, 99, 235);     
     private Color bgHover = new Color(239, 246, 255);     
 
-    // Đã đổi btnCaLamViec thành btnHoaDon
     private MenuButton btnTongQuan, btnSanPham, btnKhachHang, btnBanHang, btnKhuyenMai, btnNhanVien, btnHoaDon, btnBaoHanh, btnBaoCao;
     
     private JPanel pnlCards; 
     private CardLayout cardLayout;
     private JPanel pnlBreadcrumb;
     private JLabel lblPageTitle; 
+    
+    private UI_KhachHang uiKhachHang;
 
     class HiDPIIcon implements Icon {
         private Image image;
@@ -158,7 +159,7 @@ public class UI_TrangChu extends JFrame implements ActionListener {
         btnBanHang = new MenuButton("Bán hàng", "/icon/ic_banhang.png");
         btnKhuyenMai = new MenuButton("Khuyến mãi", "/icon/ic_khuyenmai.png");
         btnNhanVien = new MenuButton("Nhân viên", "/icon/ic_nhanvien.png");
-        btnHoaDon = new MenuButton("Hóa đơn", "/icon/ic_hoadon.png"); // Đã đổi từ Ca làm việc sang Hóa đơn
+        btnHoaDon = new MenuButton("Hóa đơn", "/icon/ic_hoadon.png");
         btnBaoHanh = new MenuButton("Bảo hành", "/icon/ic_baohanh.png");
         btnBaoCao = new MenuButton("Báo cáo", "/icon/ic_baocao.png");
         
@@ -206,7 +207,6 @@ public class UI_TrangChu extends JFrame implements ActionListener {
         pnlTopLeft.add(lblPageTitle, BorderLayout.CENTER);
         pnlTopBar.add(pnlTopLeft, BorderLayout.WEST);
         
-        // Khu vực thông tin User bên phải
         JPanel pnlUserInfo = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 25));
         pnlUserInfo.setBackground(bgWhite);
         pnlUserInfo.setBorder(new EmptyBorder(0, 0, 0, 30));
@@ -260,24 +260,51 @@ public class UI_TrangChu extends JFrame implements ActionListener {
         pnlCards = new JPanel(cardLayout);
         pnlCards.setBackground(bgMain);
         
+        uiKhachHang = new UI_KhachHang();
+        // =========================================================
+        // KẾT NỐI SỰ KIỆN TỪ BÁN HÀNG QUA TRANG CHỦ
+        // =========================================================
+        Runnable veDanhSachHoaDon = () -> {
+            setActiveMenu(btnHoaDon);
+            chuyenTrang(new String[][]{{"Hóa đơn", "HoaDon", "Quản lý hóa đơn"}});
+        };
+        
+        // 1. Hành động khi bấm "Thanh toán"
+        Runnable actionThanhToan = () -> {
+            setActiveMenu(btnHoaDon); // Đổi Sidebar sang Tab Hóa Đơn
+            chuyenTrang(new String[][]{{"Hóa đơn", "HoaDon", "Quản lý hóa đơn"}, {"Lập hóa đơn", "LapHoaDon", "Lập hóa đơn bán hàng"}});
+        };
+        
+        // 2. Hành động khi bấm "Đăng ký khách hàng mới"
+        Runnable actionThemKhach = () -> {
+            setActiveMenu(btnKhachHang); 
+            uiKhachHang.moFormDangKy(); // Ép màn hình Khách hàng mở sẵn Form Thêm mới
+            chuyenTrang(new String[][]{{"Khách hàng", "KhachHang", "Đăng ký khách hàng mới"}});
+        };
+        
+        PNL_ChiTietHoaDon chiTietHoaDon = new PNL_ChiTietHoaDon(veDanhSachHoaDon);
+        
         pnlCards.add(createTongQuanPanel(), "TongQuan"); 
-//        pnlCards.add(new PNL_SanPham(), "SanPham"); 
-//        pnlCards.add(new PNL_KhachHang(), "KhachHang");
-        pnlCards.add(new PNL_BanHang(), "BanHang");
+        pnlCards.add(new UI_SanPham(), "SanPham"); 
+        pnlCards.add(uiKhachHang, "KhachHang");        
+        pnlCards.add(new PNL_BanHang(actionThanhToan, actionThemKhach), "BanHang");
+        
 //        pnlCards.add(new PNL_KhuyenMai(), "KhuyenMai");
 //        pnlCards.add(new PNL_NhanVien(), "NhanVien");
-        Runnable veDanhSachHoaDon = () -> chuyenTrang(new String[][]{{"Hóa đơn", "HoaDon", "Quản lý hóa đơn"}});
-        PNL_ChiTietHoaDon chiTietHoaDon = new PNL_ChiTietHoaDon(veDanhSachHoaDon);
         pnlCards.add(new PNL_LapHoaDon(veDanhSachHoaDon), "LapHoaDon");
         pnlCards.add(chiTietHoaDon, "ChiTietHoaDon");
         pnlCards.add(new PNL_HoaDon(
-            () -> chuyenTrang(new String[][]{{"Hóa đơn", "HoaDon", "Quản lý hóa đơn"}, {"Lập hóa đơn", "LapHoaDon", "Lập hóa đơn bán hàng"}}),
+            () -> {
+                setActiveMenu(btnHoaDon);
+                chuyenTrang(new String[][]{{"Hóa đơn", "HoaDon", "Quản lý hóa đơn"}, {"Lập hóa đơn", "LapHoaDon", "Lập hóa đơn bán hàng"}});
+            },
             hoaDon -> {
                 chiTietHoaDon.setHoaDon(hoaDon);
+                setActiveMenu(btnHoaDon);
                 chuyenTrang(new String[][]{{"Hóa đơn", "HoaDon", "Quản lý hóa đơn"}, {"Chi tiết hóa đơn", "ChiTietHoaDon", "Chi tiết hóa đơn"}});
             }), "HoaDon");
-        pnlCards.add(new PNL_BaoHanh(), "BaoHanh");
-        pnlCards.add(new PNL_BaoCao(), "BaoCao");
+//        pnlCards.add(new PNL_BaoHanh(), "BaoHanh");
+//        pnlCards.add(new PNL_BaoCao(), "BaoCao");
         
         
         btnTongQuan.addActionListener(this);
@@ -299,23 +326,28 @@ public class UI_TrangChu extends JFrame implements ActionListener {
     private JPanel createTongQuanPanel() {
         JPanel pnlContent = new JPanel(new BorderLayout());
         pnlContent.setBackground(bgMain);
-        
         JLabel lblHint = new JLabel("Màn hình Tổng quan đang trống. Hãy bấm menu Sản phẩm bên trái!");
         lblHint.setHorizontalAlignment(SwingConstants.CENTER);
         lblHint.setForeground(Color.GRAY);
         pnlContent.add(lblHint, BorderLayout.CENTER);
-        
         return pnlContent;
     }
-
-    private JPanel createEmptyPanel(String msg) {
-        JPanel pnl = new JPanel(new BorderLayout());
-        pnl.setBackground(bgMain);
-        JLabel lbl = new JLabel(msg, SwingConstants.CENTER);
-        lbl.setFont(new Font("Segoe UI", Font.ITALIC, 16));
-        lbl.setForeground(textGray);
-        pnl.add(lbl, BorderLayout.CENTER);
-        return pnl;
+    
+    // --- HÀM MỚI: Dùng để đồng bộ màu nút Sidebar ---
+    private void setActiveMenu(MenuButton clickedBtn) {
+        MenuButton[] btns = {btnTongQuan, btnSanPham, btnKhachHang, btnBanHang, btnKhuyenMai, btnNhanVien, btnHoaDon, btnBaoHanh, btnBaoCao};
+        for(MenuButton btn : btns) {
+            if(btn != null) {
+                btn.isActive = false;
+                btn.setBackground(bgWhite);
+                btn.setForeground(textGray);
+            }
+        }
+        if (clickedBtn != null) {
+            clickedBtn.isActive = true;
+            clickedBtn.setBackground(bgHover);
+            clickedBtn.setForeground(colorBlue);
+        }
     }
     
     public void chuyenTrang(String[][] path) {
@@ -367,25 +399,16 @@ public class UI_TrangChu extends JFrame implements ActionListener {
     @Override
     public void actionPerformed(ActionEvent e) {
         Object source = e.getSource();
-        MenuButton[] btns = {btnTongQuan, btnSanPham, btnKhachHang, btnBanHang, btnKhuyenMai, btnNhanVien, btnHoaDon, btnBaoHanh, btnBaoCao};
-        for(MenuButton btn : btns) {
-            if(btn != null) {
-                btn.isActive = false;
-                btn.setBackground(bgWhite);
-                btn.setForeground(textGray);
-            }
-        }
         
-        MenuButton clickedBtn = (MenuButton) source;
-        clickedBtn.isActive = true;
-        clickedBtn.setBackground(bgHover);
-        clickedBtn.setForeground(colorBlue);
+        // Gọi hàm reset đổi màu cho nút vừa bấm
+        setActiveMenu((MenuButton) source);
 
         if (source == btnTongQuan) {
             chuyenTrang(new String[][]{{"Tổng quan", "TongQuan", "Tổng quan hệ thống"}});
         } else if (source == btnSanPham) {
             chuyenTrang(new String[][]{{"Sản phẩm", "SanPham", "Tra cứu sản phẩm"}});
         } else if (source == btnKhachHang) {
+            uiKhachHang.moDanhSach(); 
             chuyenTrang(new String[][]{{"Khách hàng", "KhachHang", "Quản lý khách hàng"}});
         } else if (source == btnBanHang) {
             chuyenTrang(new String[][]{{"Bán hàng", "BanHang", "Quản lý bán hàng tại quầy"}});
