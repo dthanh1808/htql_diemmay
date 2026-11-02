@@ -180,6 +180,21 @@ public class UI_DangNhap extends JFrame {
 //        // Xử lý sự kiện
 //        btnLogin.addActionListener(this);
 //        txtPass.addActionListener(e -> btnLogin.doClick());
+        
+        btnLogin.addActionListener(e -> {
+            String user = txtUser.getText();
+            String pass = new String(txtPass.getPassword());
+          
+            if (user.equals("admin") && pass.equals("123456")) {
+                JOptionPane.showMessageDialog(this, "Đăng nhập thành công!");
+                this.dispose(); 
+                
+                // Mở trang chủ của hệ thống lên
+                new UI_TrangChu().setVisible(true); 
+            } else {
+                JOptionPane.showMessageDialog(this, "Sai tài khoản hoặc mật khẩu!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            }
+        });
     }
 
     public static void main(String[] args) {
