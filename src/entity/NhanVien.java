@@ -13,7 +13,8 @@ public class NhanVien {
 	private LocalDate ngaySinh;
 	private String diachi;
 	private String chucVu;
-	private boolean trangThai; // true: Đang làm việc, false: Nghỉ việc/Tạm nghỉ
+	private String trangThai; // true: Đang làm việc, false: Nghỉ việc/Tạm nghỉ
+	private String ghiChu;
 	private Date ngayVaoLam;
 	private TaiKhoan taiKhoan;
 	private String anhDaiDien;
@@ -24,7 +25,8 @@ public class NhanVien {
 	
 
 	public NhanVien(String maNV, String hoTen, boolean gioiTinh, String sdt, String email, LocalDate ngaySinh,
-			String diachi, String chucVu, boolean trangThai, Date ngayVaoLam, TaiKhoan taiKhoan, String anhDaiDien) {
+			String diachi, String chucVu, String trangThai, String ghiChu, Date ngayVaoLam, TaiKhoan taiKhoan,
+			String anhDaiDien) {
 		super();
 		this.maNV = maNV;
 		this.hoTen = hoTen;
@@ -35,6 +37,7 @@ public class NhanVien {
 		this.diachi = diachi;
 		this.chucVu = chucVu;
 		this.trangThai = trangThai;
+		this.ghiChu = ghiChu;
 		this.ngayVaoLam = ngayVaoLam;
 		this.taiKhoan = taiKhoan;
 		this.anhDaiDien = anhDaiDien;
@@ -118,15 +121,29 @@ public class NhanVien {
 //			throw new IllegalArgumentException("Chức vụ không hợp lệ theo quy định hệ thống!");
 //		}
 		this.chucVu = chucVu;
-	}
+	}	
 
-	public boolean isTrangThai() {
+	public String getTrangThai() {
 		return trangThai;
 	}
 
-	public void setTrangThai(boolean trangThai) {
+
+
+	public void setTrangThai(String trangThai) {
 		this.trangThai = trangThai;
 	}
+
+	public String getGhiChu() {
+		return ghiChu;
+	}
+
+
+
+	public void setGhiChu(String ghiChu) {
+		this.ghiChu = ghiChu;
+	}
+
+
 
 	public Date getNgayVaoLam() {
 		return ngayVaoLam;
