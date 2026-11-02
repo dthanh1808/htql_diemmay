@@ -25,7 +25,7 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellEditor;
 import javax.swing.table.TableCellRenderer;
 
-public class UI_SanPham extends JPanel {
+public class PNL_SanPham extends JPanel {
 
     private final SanPhamDAO sanPhamDAO;
     private final DanhMucDAO danhMucDAO;
@@ -565,9 +565,9 @@ public class UI_SanPham extends JPanel {
         return scrollPane;
     }
 
-    public UI_SanPham() { this(DuLieuTam.getMacDinh()); }
+    public PNL_SanPham() { this(DuLieuTam.getMacDinh()); }
 
-    public UI_SanPham(DuLieuTam duLieu) {
+    public PNL_SanPham(DuLieuTam duLieu) {
         sanPhamDAO = new SanPhamDAO(duLieu);
         danhMucDAO = new DanhMucDAO(duLieu);
         initialiseShell();
@@ -1120,7 +1120,7 @@ private void showEditor(String id) {
         private void chonAnh() {
             JFileChooser chooser = new JFileChooser();
             chooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Ảnh PNG, JPEG (tối đa 2 MB)", "png", "jpg", "jpeg"));
-            if (chooser.showOpenDialog(UI_SanPham.this) != JFileChooser.APPROVE_OPTION) return;
+            if (chooser.showOpenDialog(PNL_SanPham.this) != JFileChooser.APPROVE_OPTION) return;
             try {
                 String anhMoi = SanPhamDAO.docAnh(chooser.getSelectedFile().toPath());
                 ImageIcon icon = new ImageIcon(Base64.getDecoder().decode(anhMoi));

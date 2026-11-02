@@ -21,7 +21,7 @@ public class UI_TrangChu extends JFrame implements ActionListener {
     private JPanel pnlBreadcrumb;
     private JLabel lblPageTitle; 
     
-    private UI_KhachHang uiKhachHang;
+    private PNL_KhachHang uiKhachHang;
 
     class HiDPIIcon implements Icon {
         private Image image;
@@ -260,7 +260,7 @@ public class UI_TrangChu extends JFrame implements ActionListener {
         pnlCards = new JPanel(cardLayout);
         pnlCards.setBackground(bgMain);
         
-        uiKhachHang = new UI_KhachHang();
+        uiKhachHang = new PNL_KhachHang();
         // =========================================================
         // KẾT NỐI SỰ KIỆN TỪ BÁN HÀNG QUA TRANG CHỦ
         // =========================================================
@@ -286,12 +286,12 @@ public class UI_TrangChu extends JFrame implements ActionListener {
         
         pnlCards.add(createTongQuanPanel(), "TongQuan"); 
 
-        pnlCards.add(new UI_SanPham(), "SanPham"); 
+        pnlCards.add(new PNL_SanPham(), "SanPham"); 
         pnlCards.add(uiKhachHang, "KhachHang");        
         pnlCards.add(new PNL_BanHang(actionThanhToan, actionThemKhach), "BanHang");
         
-//        pnlCards.add(new PNL_KhuyenMai(), "KhuyenMai");
-//        pnlCards.add(new PNL_NhanVien(), "NhanVien");
+        pnlCards.add(new PNL_KhuyenMai(), "KhuyenMai");
+        pnlCards.add(new PNL_NhanVien(), "NhanVien");
         pnlCards.add(new PNL_LapHoaDon(veDanhSachHoaDon), "LapHoaDon");
         pnlCards.add(chiTietHoaDon, "ChiTietHoaDon");
         pnlCards.add(new PNL_HoaDon(
@@ -304,8 +304,8 @@ public class UI_TrangChu extends JFrame implements ActionListener {
                 setActiveMenu(btnHoaDon);
                 chuyenTrang(new String[][]{{"Hóa đơn", "HoaDon", "Quản lý hóa đơn"}, {"Chi tiết hóa đơn", "ChiTietHoaDon", "Chi tiết hóa đơn"}});
             }), "HoaDon");
-//        pnlCards.add(new PNL_BaoHanh(), "BaoHanh");
-//        pnlCards.add(new PNL_BaoCao(), "BaoCao");
+        pnlCards.add(new PNL_BaoHanh(), "BaoHanh");
+        pnlCards.add(new PNL_BaoCao(), "BaoCao");
         
         
         btnTongQuan.addActionListener(this);

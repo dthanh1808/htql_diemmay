@@ -11,6 +11,7 @@ public class KhachHang {
     private String email;
     private String diaChi;
     private LocalDate ngaySinh;
+    private double tongChiTieuTichLuy;
     private boolean dangHoatDong;
     private boolean nhanKhuyenMai;
     private String ghiChu;
@@ -19,22 +20,30 @@ public class KhachHang {
 
     public KhachHang() { }
 
-    public KhachHang(String id, String hoTen, String soDienThoai, String email, String diaChi, LocalDate ngaySinh, boolean dangHoatDong, boolean nhanKhuyenMai, String ghiChu, LocalDateTime taoLuc, LocalDateTime capNhatLuc) {
-        this.id = id;
-        this.hoTen = hoTen;
-        this.soDienThoai = soDienThoai;
-        this.email = email;
-        this.diaChi = diaChi;
-        this.ngaySinh = ngaySinh;
-        this.dangHoatDong = dangHoatDong;
-        this.nhanKhuyenMai = nhanKhuyenMai;
-        this.ghiChu = ghiChu;
-        this.taoLuc = taoLuc;
-        this.capNhatLuc = capNhatLuc;
-    }
+    
 
-    public KhachHang(KhachHang other) {
-        this(other.id, other.hoTen, other.soDienThoai, other.email, other.diaChi, other.ngaySinh, other.dangHoatDong, other.nhanKhuyenMai, other.ghiChu, other.taoLuc, other.capNhatLuc);
+    public KhachHang(String id, String hoTen, String soDienThoai, String email, String diaChi, LocalDate ngaySinh,
+			double tongChiTieuTichLuy, boolean dangHoatDong, boolean nhanKhuyenMai, String ghiChu, LocalDateTime taoLuc,
+			LocalDateTime capNhatLuc) {
+		super();
+		this.id = id;
+		this.hoTen = hoTen;
+		this.soDienThoai = soDienThoai;
+		this.email = email;
+		this.diaChi = diaChi;
+		this.ngaySinh = ngaySinh;
+		this.tongChiTieuTichLuy = tongChiTieuTichLuy;
+		this.dangHoatDong = dangHoatDong;
+		this.nhanKhuyenMai = nhanKhuyenMai;
+		this.ghiChu = ghiChu;
+		this.taoLuc = taoLuc;
+		this.capNhatLuc = capNhatLuc;
+	}
+
+
+
+	public KhachHang(KhachHang other) {
+        this(other.id, other.hoTen, other.soDienThoai, other.email, other.diaChi, other.ngaySinh, other.tongChiTieuTichLuy, other.dangHoatDong, other.nhanKhuyenMai, other.ghiChu, other.taoLuc, other.capNhatLuc);
     }
 
     public String getId() { return id; }
@@ -55,7 +64,11 @@ public class KhachHang {
     public LocalDate getNgaySinh() { return ngaySinh; }
     public void setNgaySinh(LocalDate ngaySinh) { this.ngaySinh = ngaySinh; }
 
-    public boolean isDangHoatDong() { return dangHoatDong; }
+    public double getTongChiTieuTichLuy() {
+		return tongChiTieuTichLuy;
+	}
+
+	public boolean isDangHoatDong() { return dangHoatDong; }
     public void setDangHoatDong(boolean dangHoatDong) { this.dangHoatDong = dangHoatDong; }
 
     public boolean isNhanKhuyenMai() { return nhanKhuyenMai; }
