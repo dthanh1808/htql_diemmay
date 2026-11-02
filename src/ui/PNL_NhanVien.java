@@ -18,7 +18,10 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.AbstractButton;
@@ -672,6 +675,7 @@ public class PNL_NhanVien extends JPanel implements ActionListener, MouseListene
 				return matchChucVu && matchTrangThai && matchGioiTinh;
 			}
 		});
+		loadDataNhanVien();
 	}
 
 	/**
@@ -694,7 +698,6 @@ public class PNL_NhanVien extends JPanel implements ActionListener, MouseListene
 
 	// THÊM NHÂN VIÊN
 	private void themNhanVien() {
-
 		String maNV = txtMaNV.getText().trim();
 		String hoTen = txtHoTen.getText().trim();
 		String sdt = txtSDT.getText().trim();
@@ -702,11 +705,9 @@ public class PNL_NhanVien extends JPanel implements ActionListener, MouseListene
 		String ngaySinh = txtNgaySinh.getText().trim();
 
 		if (maNV.isEmpty() || hoTen.isEmpty() || sdt.isEmpty() || email.isEmpty() || ngaySinh.isEmpty()) {
-
 			JOptionPane.showMessageDialog(this, "Vui lòng nhập đầy đủ thông tin!");
 			return;
 		}
-
 		DefaultTableModel model = (DefaultTableModel) table.getModel();
 
 		for (int i = 0; i < model.getRowCount(); i++) {
@@ -716,24 +717,73 @@ public class PNL_NhanVien extends JPanel implements ActionListener, MouseListene
 			}
 		}
 
-		String gioiTinh = rbNam.isSelected() ? "Nam" : "Nữ";
+		try {
+			NhanVien nv = new NhanVien();
 
-		String trangThai = cbTrangThai.getSelectedItem().toString();
+			nv.setMaNV(maNV);
+			nv.setHoTen(hoTen);
+			nv.setSdt(sdt);
+			nv.setEmail(email);
+			nv.setNgaySinh(
+					java.time.LocalDate.parse(ngaySinh, java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")));
 
-		String tag = trangThai.replace("● ", "");
+			nv.setGioiTinh(rbNam.isSelected());
+			nv.setChucVu(cbChucVu.getSelectedItem().toString());
 
-		model.addRow(new Object[] { model.getRowCount() + 1, maNV, hoTen, gioiTinh, ngaySinh, sdt, email,
-				cbChucVu.getSelectedItem(), tag, "" });
+			String trangThai = cbTrangThai.getSelectedItem().toString().replace("● ", "");
+			nv.setTrangThai(trangThai);
 
-		JOptionPane.showMessageDialog(this, "Thêm nhân viên thành công!");
+			// Các thông tin bổ sung
+			nv.setDiachi("");
+			nv.setGhiChu("");
+			nv.setAnhDaiDien("");
+			nv.setNgayVaoLam(new java.util.Date());
 
-		xoaTrangForm();
+			// Lưu xuống database
+			if (nv_dao.create(nv)) {
+				JOptionPane.showMessageDialog(this, "Thêm nhân viên thành công!");
+
+				// Cập nhật lại bảng từ database
+				loadDataNhanVien();
+
+				xoaTrangForm();
+			} else {
+				JOptionPane.showMessageDialog(this, "Thêm nhân viên thất bại!");
+			}
+
+		} catch (java.time.format.DateTimeParseException e) {
+			JOptionPane.showMessageDialog(this, "Ngày sinh không hợp lệ! Vui lòng nhập theo định dạng dd/MM/yyyy.");
+		}
 	}
 
 	// CẬP NHẬT
 
-	private void capNhatNhanVien() {
+//	private void capNhatNhanVien() {
+//
+//		int row = table.getSelectedRow();
+//
+//		if (row == -1) {
+//			JOptionPane.showMessageDialog(this, "Vui lòng chọn nhân viên cần cập nhật!");
+//			return;
+//		}
+//
+//		int modelRow = table.convertRowIndexToModel(row);
+//
+//		table.setValueAt(txtMaNV.getText().trim(), modelRow, 1);
+//		table.setValueAt(txtHoTen.getText().trim(), modelRow, 2);
+//		table.setValueAt(rbNam.isSelected() ? "Nam" : "Nữ", modelRow, 3);
+//		table.setValueAt(txtNgaySinh.getText().trim(), modelRow, 4);
+//		table.setValueAt(txtSDT.getText().trim(), modelRow, 5);
+//		table.setValueAt(txtEmail.getText().trim(), modelRow, 6);
+//		table.setValueAt(cbChucVu.getSelectedItem(), modelRow, 7);
+//		table.setValueAt(cbTrangThai.getSelectedItem(), modelRow, 8);
+//
+//		JOptionPane.showMessageDialog(this, "Cập nhật nhân viên thành công!");
+//	}
 
+	// CAP NHAT XUONG DATA
+
+	private void capNhatNhanVien() {
 		int row = table.getSelectedRow();
 
 		if (row == -1) {
@@ -743,16 +793,59 @@ public class PNL_NhanVien extends JPanel implements ActionListener, MouseListene
 
 		int modelRow = table.convertRowIndexToModel(row);
 
-		table.setValueAt(txtMaNV.getText().trim(), modelRow, 1);
-		table.setValueAt(txtHoTen.getText().trim(), modelRow, 2);
-		table.setValueAt(rbNam.isSelected() ? "Nam" : "Nữ", modelRow, 3);
-		table.setValueAt(txtNgaySinh.getText().trim(), modelRow, 4);
-		table.setValueAt(txtSDT.getText().trim(), modelRow, 5);
-		table.setValueAt(txtEmail.getText().trim(), modelRow, 6);
-		table.setValueAt(cbChucVu.getSelectedItem(), modelRow, 7);
-		table.setValueAt(cbTrangThai.getSelectedItem(), modelRow, 8);
+		// Lấy mã nhân viên cũ
+		String maNVCu = table.getModel().getValueAt(modelRow, 1).toString();
 
-		JOptionPane.showMessageDialog(this, "Cập nhật nhân viên thành công!");
+		// Lấy dữ liệu từ form
+		String maNV = txtMaNV.getText().trim();
+		String hoTen = txtHoTen.getText().trim();
+		String sdt = txtSDT.getText().trim();
+		String email = txtEmail.getText().trim();
+		String ngaySinh = txtNgaySinh.getText().trim();
+
+		if (maNV.isEmpty() || hoTen.isEmpty() || sdt.isEmpty() || email.isEmpty() || ngaySinh.isEmpty()) {
+			JOptionPane.showMessageDialog(this, "Vui lòng nhập đầy đủ thông tin!");
+			return;
+		}
+
+		try {
+			NhanVien nv = new NhanVien();
+			nv.setMaNV(maNV);
+			nv.setHoTen(hoTen);
+			nv.setGioiTinh(rbNam.isSelected());
+			nv.setNgaySinh(LocalDate.parse(ngaySinh, DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+			nv.setSdt(sdt);
+			nv.setEmail(email);
+			nv.setChucVu(cbChucVu.getSelectedItem().toString());
+
+			String trangThai = cbTrangThai.getSelectedItem().toString();
+			nv.setTrangThai(trangThai.replace("● ", ""));
+			nv.setDiachi(txtDiaChi.getText().trim());
+			nv.setGhiChu(txtGhiChu.getText().trim());
+			nv.setAnhDaiDien(duongDanAnh);
+			ArrayList<NhanVien> nvCu = nv_dao.getNhanVienTheoMa(maNVCu);
+			ArrayList<NhanVien> dsNV = nv_dao.getNhanVienTheoMa(maNVCu);
+			if (dsNV != null && !dsNV.isEmpty()) {
+				nv.setNgayVaoLam(dsNV.get(0).getNgayVaoLam());
+			}
+			boolean ketQua = nv_dao.update(nv);
+			if (ketQua) {
+				JOptionPane.showMessageDialog(this, "Cập nhật nhân viên thành công!");
+				loadDataNhanVien();
+				xoaTrangForm();
+			} else {
+				JOptionPane.showMessageDialog(this, "Cập nhật nhân viên thất bại!");
+			}
+		} catch (DateTimeParseException e) {
+			JOptionPane.showMessageDialog(this, "Ngày sinh không hợp lệ! Vui lòng nhập dd/MM/yyyy.");
+
+		} catch (IllegalArgumentException e) {
+			JOptionPane.showMessageDialog(this, e.getMessage());
+
+		} catch (Exception e) {
+			JOptionPane.showMessageDialog(this, "Lỗi cập nhật nhân viên: " + e.getMessage());
+			e.printStackTrace();
+		}
 	}
 
 	// CHỌN ẢNH

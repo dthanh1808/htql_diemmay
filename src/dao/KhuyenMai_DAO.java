@@ -33,8 +33,18 @@ public class KhuyenMai_DAO {
 
 	public boolean create(KhuyenMai km) throws SQLException {
 		Connection con = ConnectDB.getConnection();
-		String sql = "INSERT INTO KhuyenMai (maKM, tenKM, loaiKM, giaTriGiam, thoiGianBatDau, "
-				+ "thoiGianKetThuc, trangThai, phamViApDung, doiTuongApDung) VALUES (?,?,?,?,?,?,?,?,?)";
+
+		if (con == null) {
+			throw new SQLException("Chưa kết nối database!");
+		}
+
+		if (km.getThoigianBatDau() == null || km.getThoigianKetThuc() == null) {
+			throw new SQLException("Thời gian khuyến mãi không được để trống!");
+		}
+
+		String sql = "INSERT INTO KhuyenMai " + "(maKM, tenKM, loaiKM, giaTriGiam, thoiGianBatDau, "
+				+ "thoiGianKetThuc, trangThai, phamViApDung, doiTuongApDung) " + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
 		try (PreparedStatement stmt = con.prepareStatement(sql)) {
 			stmt.setString(1, km.getMaKM());
 			stmt.setNString(2, km.getTenKM());
@@ -45,6 +55,7 @@ public class KhuyenMai_DAO {
 			stmt.setNString(7, km.getTrangThai());
 			stmt.setNString(8, km.getPhamViApDung());
 			stmt.setNString(9, km.getDoiTuongApDung());
+
 			return stmt.executeUpdate() > 0;
 		}
 	}
