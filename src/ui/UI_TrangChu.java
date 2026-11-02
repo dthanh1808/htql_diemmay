@@ -266,8 +266,18 @@ public class UI_TrangChu extends JFrame implements ActionListener {
         pnlCards.add(new PNL_BanHang(), "BanHang");
 //        pnlCards.add(new PNL_KhuyenMai(), "KhuyenMai");
 //        pnlCards.add(new PNL_NhanVien(), "NhanVien");
-//        pnlCards.add(new PNL_HoaDon(), "HoaDon");
+        Runnable veDanhSachHoaDon = () -> chuyenTrang(new String[][]{{"Hóa đơn", "HoaDon", "Quản lý hóa đơn"}});
+        PNL_ChiTietHoaDon chiTietHoaDon = new PNL_ChiTietHoaDon(veDanhSachHoaDon);
+        pnlCards.add(new PNL_LapHoaDon(veDanhSachHoaDon), "LapHoaDon");
+        pnlCards.add(chiTietHoaDon, "ChiTietHoaDon");
+        pnlCards.add(new PNL_HoaDon(
+            () -> chuyenTrang(new String[][]{{"Hóa đơn", "HoaDon", "Quản lý hóa đơn"}, {"Lập hóa đơn", "LapHoaDon", "Lập hóa đơn bán hàng"}}),
+            hoaDon -> {
+                chiTietHoaDon.setHoaDon(hoaDon);
+                chuyenTrang(new String[][]{{"Hóa đơn", "HoaDon", "Quản lý hóa đơn"}, {"Chi tiết hóa đơn", "ChiTietHoaDon", "Chi tiết hóa đơn"}});
+            }), "HoaDon");
         pnlCards.add(new PNL_BaoHanh(), "BaoHanh");
+        pnlCards.add(new PNL_BaoCao(), "BaoCao");
         
         
         btnTongQuan.addActionListener(this);
