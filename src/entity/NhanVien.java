@@ -113,10 +113,10 @@ public class NhanVien {
 	}
 
 	public void setChucVu(String chucVu) {
-		if (chucVu == null
-				|| (!chucVu.equals("Quản lý") && !chucVu.equals("Bán hàng") && !chucVu.equals("Chăm sóc khách hàng"))) {
-			throw new IllegalArgumentException("Chức vụ không hợp lệ theo quy định hệ thống!");
-		}
+//		if (chucVu == null
+//				|| (!chucVu.equals("Quản lý") && !chucVu.equals("Bán hàng") && !chucVu.equals("Chăm sóc khách hàng"))) {
+//			throw new IllegalArgumentException("Chức vụ không hợp lệ theo quy định hệ thống!");
+//		}
 		this.chucVu = chucVu;
 	}
 
