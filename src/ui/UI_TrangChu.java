@@ -285,6 +285,7 @@ public class UI_TrangChu extends JFrame implements ActionListener {
         PNL_ChiTietHoaDon chiTietHoaDon = new PNL_ChiTietHoaDon(veDanhSachHoaDon);
         
         pnlCards.add(createTongQuanPanel(), "TongQuan"); 
+
         pnlCards.add(new UI_SanPham(), "SanPham"); 
         pnlCards.add(uiKhachHang, "KhachHang");        
         pnlCards.add(new PNL_BanHang(actionThanhToan, actionThemKhach), "BanHang");
