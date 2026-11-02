@@ -45,7 +45,6 @@ public class NhanVien_DAO {
 				nv.setTrangThai(rs.getString("trangThai"));
 				nv.setDiachi(rs.getString("diaChi"));
 				nv.setNgayVaoLam(rs.getDate("ngayVaoLam"));
-				nv.setGhiChu(rs.getString("ghiChu"));
 				nv.setAnhDaiDien(rs.getString("anhDaiDien"));
 
 				dsNhanVien.add(nv);

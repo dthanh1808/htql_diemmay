@@ -8,7 +8,7 @@ public class PhieuBaoHanh {
     private String loaiBaoHanh;
     private SanPham sp;
     private KhachHang kh;
-//    private NhanVien nv;
+    private NhanVien nv;
     private Date ngayTiepNhan;
     private Date ngayHenTra;
     private String ghiChu;
@@ -18,18 +18,18 @@ public class PhieuBaoHanh {
     public PhieuBaoHanh() {
     }
 
-//    public PhieuBaoHanh(String maPhieu, String soSerial, SanPham sp, KhachHang kh, NhanVien nv, Date ngayTiepNhan, Date ngayHenTra, String ghiChuS, double chiPhiSuaChua, String trangThai) {
-//        this.maPhieu = maPhieu;
-//        this.soSerial = soSerial;
-//        this.sp = sp;
-//        this.kh = kh;
-//        this.nv = nv;
-//        this.ngayTiepNhan = ngayTiepNhan;
-//        this.ngayHenTra = ngayHenTra;
-//        this.ghiChu = ghiChu;
-//        this.chiPhiSuaChua = chiPhiSuaChua;
-//        this.trangThai = trangThai;
-//    }
+    public PhieuBaoHanh(String maPhieu, String soSerial, SanPham sp, KhachHang kh, NhanVien nv, Date ngayTiepNhan, Date ngayHenTra, String ghiChuS, double chiPhiSuaChua, String trangThai) {
+        this.maPhieu = maPhieu;
+        this.soSerial = soSerial;
+        this.sp = sp;
+        this.kh = kh;
+        this.nv = nv;
+        this.ngayTiepNhan = ngayTiepNhan;
+        this.ngayHenTra = ngayHenTra;
+        this.ghiChu = ghiChu;
+        this.chiPhiSuaChua = chiPhiSuaChua;
+        this.trangThai = trangThai;
+    }
 
     public String getMaPhieu() {
 		return maPhieu;
@@ -71,13 +71,13 @@ public class PhieuBaoHanh {
 		this.kh = kh;
 	}
 
-//	public NhanVien getNv() {
-//		return nv;
-//	}
-//
-//	public void setNv(NhanVien nv) {
-//		this.nv = nv;
-//	}
+	public NhanVien getNv() {
+		return nv;
+	}
+
+	public void setNv(NhanVien nv) {
+		this.nv = nv;
+	}
 
 	public Date getNgayTiepNhan() {
 		return ngayTiepNhan;
@@ -126,7 +126,7 @@ public class PhieuBaoHanh {
                 ", soSerial='" + soSerial + '\'' +
                 ", sp=" + sp +
                 ", kh=" + kh +
-//                ", nv=" + nv +
+                ", nv=" + nv +
                 ", ngayTiepNhan=" + ngayTiepNhan +
                 ", ngayHenTra=" + ngayHenTra +
                 ", moTa='" + ghiChu + '\'' +

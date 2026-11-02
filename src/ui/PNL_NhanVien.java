@@ -919,7 +919,7 @@ public class PNL_NhanVien extends JPanel implements ActionListener, MouseListene
 	private Object[] toRow(int stt, NhanVien nv) {
 		return new Object[] { stt, nv.getMaNV(), nv.getHoTen(), nv.isGioiTinh() ? "Nam" : "Nữ",
 				nv.getNgaySinh() != null ? nv.getNgaySinh().format(DATE_FMT) : "", nv.getSdt(), nv.getEmail(),
-				nv.getChucVu(), nv.getTrangThai(), "" // cột thao tác (nút sửa/xóa...)
+				nv.getChucVu(), nv.getGhiChu(), "" // cột thao tác (nút sửa/xóa...)
 		};
 	}
 

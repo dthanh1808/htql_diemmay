@@ -24,7 +24,7 @@ import dao.DuLieuTam;
 import dao.KhachHangDAO;
 import entity.*;
 
-public class UI_KhachHang extends JPanel {
+public class PNL_KhachHang extends JPanel {
 
     private final Color bgMain = new Color(245, 247, 251);
     private final Color textDark = new Color(30, 41, 59);
@@ -534,8 +534,8 @@ public class UI_KhachHang extends JPanel {
     private LocalDate from, to;
     private int page = 1;
 
-    public UI_KhachHang() { this(DuLieuTam.getMacDinh()); }
-    public UI_KhachHang(DuLieuTam data) {
+    public PNL_KhachHang() { this(DuLieuTam.getMacDinh()); }
+    public PNL_KhachHang(DuLieuTam data) {
         dao = new KhachHangDAO(data);
         setLayout(new BorderLayout(0, 8));
         setBackground(bgMain);
@@ -820,7 +820,7 @@ public class UI_KhachHang extends JPanel {
                 watch(thresholds[i], () -> dirty = true); watch(discounts[i], () -> dirty = true);
             }
             add(view("Chính sách hạng thành viên", scroll(form), actions(button("Lưu chính sách", 1, this::save),
-                    button("Hủy / Quay lại", 0, () -> discard(dirty, UI_KhachHang.this::backToList, () -> showView("policy"))))));
+                    button("Hủy / Quay lại", 0, () -> discard(dirty, PNL_KhachHang.this::backToList, () -> showView("policy"))))));
         }
         private void save() {
             ArrayList<HangThanhVien> draft = new ArrayList<>();
@@ -847,7 +847,7 @@ public class UI_KhachHang extends JPanel {
             field(form, 3, "Tiêu đề * (tối đa 120 ký tự)", title); field(form, 4, "Nội dung * (tối đa 2.000 ký tự)", new JScrollPane(body));
             send = button("Tạo thông báo nội bộ", 1, this::send);
             add(view("Gửi thông báo khuyến mãi", scroll(form), actions(send, button("Hủy / Quay lại", 0,
-                    () -> discard(dirty, UI_KhachHang.this::backToList, () -> showView("promotion"))))));
+                    () -> discard(dirty, PNL_KhachHang.this::backToList, () -> showView("promotion"))))));
             target.addActionListener(e -> { dirty = true; recipients(); }); watch(title, () -> dirty = true); body.getDocument().addDocumentListener(listener(() -> dirty = true)); recipients();
         }
         private String targetRank() { return target.getSelectedIndex() == 0 ? null : (String) target.getSelectedItem(); }
