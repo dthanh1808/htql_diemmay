@@ -11,7 +11,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Locale;
 import javax.imageio.ImageIO;
@@ -151,22 +150,34 @@ public class SanPhamDAO {
         return ketQua;
     }
 
-    public void sapXep(ArrayList<SanPham> danhSach, final int kieu) {
-        // 0: tên A-Z, 1: tên Z-A, 2: giá tăng, 3: giá giảm, 4: mới nhất.
-        Collections.sort(danhSach, new Comparator<SanPham>() {
-            @Override public int compare(SanPham a, SanPham b) {
-                int ketQua;
-                if (kieu == 2) ketQua = a.getGiaBan().compareTo(b.getGiaBan());
-                else if (kieu == 3) ketQua = b.getGiaBan().compareTo(a.getGiaBan());
-                else if (kieu == 4) ketQua = b.getTaoLuc().compareTo(a.getTaoLuc());
-                else {
-                    ketQua = chuanHoaTimKiem(a.getTen()).compareTo(chuanHoaTimKiem(b.getTen()));
-                    if (kieu == 1) ketQua = -ketQua;
-                }
-                if (ketQua == 0) ketQua = a.getSku().compareTo(b.getSku());
-                return ketQua;
+    public void sapXep(ArrayList<SanPham> danhSach, int kieu) {
+        // Sắp xếp chèn: đưa từng sản phẩm về đúng vị trí trong danh sách.
+        for (int i = 1; i < danhSach.size(); i++) {
+            SanPham item = danhSach.get(i);
+            int j = i - 1;
+            while (j >= 0 && soSanh(danhSach.get(j), item, kieu) > 0) {
+                danhSach.set(j + 1, danhSach.get(j));
+                j--;
             }
-        });
+            danhSach.set(j + 1, item);
+        }
+    }
+
+    private int soSanh(SanPham a, SanPham b, int kieu) {
+        // 0: tên A-Z, 1: tên Z-A, 2: giá tăng, 3: giá giảm, 4: mới nhất.
+        int ketQua;
+        if (kieu == 2) {
+            ketQua = a.getGiaBan().compareTo(b.getGiaBan());
+        } else if (kieu == 3) {
+            ketQua = b.getGiaBan().compareTo(a.getGiaBan());
+        } else if (kieu == 4) {
+            ketQua = b.getTaoLuc().compareTo(a.getTaoLuc());
+        } else {
+            ketQua = chuanHoaTimKiem(a.getTen()).compareTo(chuanHoaTimKiem(b.getTen()));
+            if (kieu == 1) ketQua = -ketQua;
+        }
+        if (ketQua == 0) ketQua = a.getSku().compareTo(b.getSku());
+        return ketQua;
     }
 
     public static String chuanHoaTimKiem(String value) {

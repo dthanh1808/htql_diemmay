@@ -104,7 +104,22 @@ public final class SanPhamUiTest {
         check(danhMucDAO.layTatCa().size() == 8, "Category delete confirmed");
         categories = (JTable) named(panel, "category.table"); categories.setRowSelectionInterval(0, 0);
         check(!button(panel, "Xóa danh mục").isEnabled(), "Used category delete disabled");
+
+        set(panel, "category.form.name", "Tên danh mục chưa lưu");
+        categories.setRowSelectionInterval(1, 1);
+        button(panel, "Bỏ thay đổi").doClick();
+        check(((JTextField) named(panel, "category.form.name")).getText().equals(categories.getValueAt(1, 0)), "Confirm selection loads requested category");
+        set(panel, "category.form.name", "Bản nháp danh mục");
+        button(panel, "Thêm danh mục").doClick(); button(panel, "Quay lại").doClick();
+        check(((JTextField) named(panel, "category.form.name")).getText().equals("Bản nháp danh mục"), "Cancel new category preserves draft");
+        button(panel, "Thêm danh mục").doClick(); button(panel, "Bỏ thay đổi").doClick();
+        check(((JTextField) named(panel, "category.form.name")).getText().isEmpty(), "Confirm new category clears form");
+        set(panel, "category.form.name", "Bản nháp khác");
+        button(panel, "Về danh sách sản phẩm").doClick(); button(panel, "Quay lại").doClick();
+        check(((JTextField) named(panel, "category.form.name")).getText().equals("Bản nháp khác"), "Cancel category exit preserves draft");
         button(panel, "Về danh sách sản phẩm").doClick();
+        button(panel, "Bỏ thay đổi").doClick();
+        check(danhMucDAO.layTatCa().size() == 8, "Discard category draft writes nothing");
         ((JComboBox<?>) named(panel, "product.sort")).setSelectedIndex(2);
         table = (JTable) named(panel, "product.table");
         check(((SanPham) table.getValueAt(0, 0)).getGiaBan().equals(BigDecimal.ONE), "Numeric sort wired");

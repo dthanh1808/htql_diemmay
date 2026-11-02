@@ -19,7 +19,9 @@ public class KhachHang {
 
     public KhachHang() { }
 
-    public KhachHang(String id, String hoTen, String soDienThoai, String email, String diaChi, LocalDate ngaySinh, boolean dangHoatDong, boolean nhanKhuyenMai, String ghiChu, LocalDateTime taoLuc, LocalDateTime capNhatLuc) {
+    public KhachHang(String id, String hoTen, String soDienThoai, String email, String diaChi,
+            LocalDate ngaySinh, boolean dangHoatDong, boolean nhanKhuyenMai, String ghiChu,
+            LocalDateTime taoLuc, LocalDateTime capNhatLuc) {
         this.id = id;
         this.hoTen = hoTen;
         this.soDienThoai = soDienThoai;
@@ -34,7 +36,8 @@ public class KhachHang {
     }
 
     public KhachHang(KhachHang other) {
-        this(other.id, other.hoTen, other.soDienThoai, other.email, other.diaChi, other.ngaySinh, other.dangHoatDong, other.nhanKhuyenMai, other.ghiChu, other.taoLuc, other.capNhatLuc);
+        this(other.id, other.hoTen, other.soDienThoai, other.email, other.diaChi, other.ngaySinh,
+            other.dangHoatDong, other.nhanKhuyenMai, other.ghiChu, other.taoLuc, other.capNhatLuc);
     }
 
     public String getId() { return id; }

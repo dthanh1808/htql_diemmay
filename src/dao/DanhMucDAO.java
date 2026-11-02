@@ -3,8 +3,6 @@ package dao;
 import entity.DanhMuc;
 import entity.SanPham;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 
 /** Thao tác danh mục trên ArrayList; chưa có câu lệnh SQL hay kết nối JDBC. */
 public class DanhMucDAO {
@@ -16,11 +14,16 @@ public class DanhMucDAO {
     public ArrayList<DanhMuc> layTatCa() {
         ArrayList<DanhMuc> ketQua = new ArrayList<>();
         for (DanhMuc dm : duLieu.getDanhMuc()) ketQua.add(new DanhMuc(dm));
-        Collections.sort(ketQua, new Comparator<DanhMuc>() {
-            @Override public int compare(DanhMuc a, DanhMuc b) {
-                return SanPhamDAO.chuanHoaTimKiem(a.getTen()).compareTo(SanPhamDAO.chuanHoaTimKiem(b.getTen()));
+        for (int i = 1; i < ketQua.size(); i++) {
+            DanhMuc item = ketQua.get(i);
+            String ten = SanPhamDAO.chuanHoaTimKiem(item.getTen());
+            int j = i - 1;
+            while (j >= 0 && SanPhamDAO.chuanHoaTimKiem(ketQua.get(j).getTen()).compareTo(ten) > 0) {
+                ketQua.set(j + 1, ketQua.get(j));
+                j--;
             }
-        });
+            ketQua.set(j + 1, item);
+        }
         return ketQua;
     }
 

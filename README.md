@@ -2,6 +2,16 @@
 
 Ứng dụng Java Swing, yêu cầu JDK 17 trở lên. Chạy lớp `ui.UI_TrangChu` trong Eclipse.
 
+Trong Eclipse, chọn đúng dự án **HeThongQuanLySieuThiDienMayGiaThanh**, bấm **F5 (Refresh)** sau khi mã nguồn thay đổi bên ngoài Eclipse. Bật **Project → Build Automatically**, dừng cửa sổ chương trình cũ rồi chạy lại `src/ui/UI_TrangChu.java`. Chương trình đang mở không tự nhận mã mới.
+
+Có thể chạy trực tiếp bằng PowerShell; script luôn biên dịch lại vào `bin` trước khi mở:
+
+```powershell
+.\scripts\run.ps1
+# Hoặc chỉ rõ JDK 17 nếu cần:
+.\scripts\run.ps1 -JavaHome "$env:USERPROFILE\.jdks\temurin-17.0.18"
+```
+
 ## Quản lý sản phẩm
 
 - Danh sách, tìm kiếm không phân biệt hoa/thường và dấu tiếng Việt; tìm theo tên, SKU, thương hiệu, danh mục.
@@ -52,7 +62,11 @@ src/
     UI_KhachHang.java # Danh sách, form, chi tiết, chính sách, khuyến mãi
 ```
 
-Entity là class thông thường có các thuộc tính `private`, constructor, getter/setter. DAO dùng vòng lặp `for`, `ArrayList`, `Comparator` để xử lý dữ liệu. Giá bán dùng `BigDecimal` để tránh sai số.
+Entity là class thông thường có các thuộc tính `private`, constructor, getter/setter. DAO dùng `ArrayList`, vòng lặp `for`/`while`, `if/else` và các hàm kiểm tra dữ liệu. Sắp xếp sản phẩm, danh mục, khách hàng và lịch sử dùng sắp xếp chèn, không dùng Stream hoặc chuỗi hàm Comparator. Cách này dễ theo dõi với lượng dữ liệu tạm nhỏ của bài tập; nếu dữ liệu lớn thì nên dùng cách sắp xếp của thư viện hoặc SQL.
+
+Hai trang dùng `ActionListener` và `actionPerformed` của Swing để xử lý nút bấm. Mỗi lệnh gọi một phương thức cụ thể; không truyền `Runnable`, lambda hay tham chiếu phương thức để xử lý nghiệp vụ. Khi hủy form, UI đọc lại giá trị các ô và so với giá trị ban đầu, không cần theo dõi từng lần gõ phím. Các form là lớp bên trong UI, không thêm tầng Service/Repository hoặc framework.
+
+Giá và chi tiêu vẫn dùng `BigDecimal` để tính tiền chính xác; ngày dùng `LocalDate`/`LocalDateTime`. Renderer, `paintComponent` và layout tùy chỉnh chỉ phục vụ việc hiển thị bảng, màu nút, ảnh và xuống dòng ở cửa sổ hẹp. Nghiệp vụ và ArrayList vẫn nằm trong DAO.
 
 Chưa kết nối SQL và không tự lưu dữ liệu ra file. Các DAO dùng chung một `DuLieuTam` trong suốt lần chạy ứng dụng. **Đóng và mở lại chương trình sẽ trở về 8 sản phẩm, 8 danh mục và 8 khách hàng mẫu; các thay đổi trước đó không được giữ lại.** Nút **Làm mới danh sách** ở Sản phẩm chỉ cập nhật giao diện từ các ArrayList hiện có.
 
@@ -71,10 +85,10 @@ Không cần thư viện ngoài hoặc Maven. Trong PowerShell tại thư mục 
 .\scripts\check.ps1 -JavaHome "$env:USERPROFILE\.jdks\temurin-17.0.18"
 ```
 
-Script biên dịch toàn bộ mã nguồn và chạy kiểm tra DAO cùng các luồng UI Sản phẩm/Khách hàng trên Swing EDT. Mỗi bài kiểm tra dùng một `DuLieuTam` riêng; ảnh kiểm tra nằm trong `build/test-data`.
+Script biên dịch toàn bộ mã nguồn vào **`bin` (cùng đầu ra với Eclipse)** và chạy kiểm tra DAO cùng các luồng UI Sản phẩm/Khách hàng trên Swing EDT. Mỗi bài kiểm tra dùng một `DuLieuTam` riêng; ảnh kiểm tra nằm trong `build/test-data`. Việc kiểm tra cập nhật luôn bản chạy, tránh trường hợp kiểm tra ở `build/classes` nhưng Eclipse vẫn dùng `.class` cũ trong `bin`.
 
 Sau khi biên dịch, có thể chạy từ thư mục dự án:
 
 ```powershell
-& "$env:JAVA_HOME\bin\java.exe" -cp "build/classes;." ui.UI_TrangChu
+& "$env:JAVA_HOME\bin\java.exe" -cp "bin;." ui.UI_TrangChu
 ```

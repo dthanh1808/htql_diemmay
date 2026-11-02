@@ -83,6 +83,25 @@ public class KhachHangUiTest {
         KhachHang exportCustomer = dao.them(new KhachHang(null, "Khách Xuất File", "0912345699", "", "=SUM(1,2)\nDòng hai", null, true, false, "", null, null));
         set(ui, "customer.search", exportCustomer.getId()); click(ui, "Áp dụng bộ lọc");
         check(ui.taoCsv().contains("\"'=SUM(1,2)\nDòng hai\""), "CSV quotes multiline fields and prevents formula execution");
+
+        click(ui, "Đăng ký khách hàng");
+        set(ui, "customer.form.name", "Đã sửa rồi trả lại");
+        set(ui, "customer.form.name", "");
+        click(ui, "Hủy / Quay lại");
+        check(table(ui) != null, "Restored form exits without unnecessary discard confirmation");
+        click(ui, "Chính sách hạng thành viên");
+        set(ui, "customer.policy.threshold.1", "2500000");
+        click(ui, "Hủy / Quay lại"); click(ui, "Quay lại");
+        check(((JTextField) named(ui, "customer.policy.threshold.1")).getText().equals("2500000"), "Cancel policy discard keeps fields");
+        click(ui, "Hủy / Quay lại"); click(ui, "Bỏ thay đổi");
+        check(dao.layChinhSach().get(1).getChiTieuToiThieu().intValueExact() == 2000000, "Discard policy does not save");
+        int notificationCount = dao.layThongBao(dao.layTatCa().get(0).getId()).size();
+        click(ui, "Gửi khuyến mãi");
+        set(ui, "customer.promo.title", "Thông báo chưa gửi");
+        click(ui, "Hủy / Quay lại"); click(ui, "Quay lại");
+        check(((JTextField) named(ui, "customer.promo.title")).getText().equals("Thông báo chưa gửi"), "Cancel promotion discard keeps fields");
+        click(ui, "Hủy / Quay lại"); click(ui, "Bỏ thay đổi");
+        check(dao.layThongBao(dao.layTatCa().get(0).getId()).size() == notificationCount, "Discard promotion creates nothing");
         System.out.println("KhachHangUiTest: " + checks + " checks passed");
     }
     public static void main(String[] args) throws Exception { SwingUtilities.invokeAndWait(KhachHangUiTest::flows); }

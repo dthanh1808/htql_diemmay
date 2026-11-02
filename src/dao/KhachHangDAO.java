@@ -5,10 +5,9 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.Locale;
 import java.util.Objects;
+import java.text.Normalizer;
 
 /** Nghiệp vụ khách hàng trên ArrayList, chưa sử dụng SQL. */
 public class KhachHangDAO {
@@ -77,8 +76,16 @@ public class KhachHangDAO {
 
     public void xoa(String id) {
         if (!coTheXoa(id)) throw new IllegalArgumentException("Chỉ xóa khách đã ngừng hoạt động, chưa có giao dịch và thông báo. Hãy giữ hồ sơ có lịch sử nghiệp vụ.");
-        duLieu.getKhachHang().removeIf(kh -> kh.getId().equals(id));
-        duLieu.getLichSuKhachHang().removeIf(ls -> ls.getKhachHangId().equals(id));
+        for (int i = duLieu.getKhachHang().size() - 1; i >= 0; i--) {
+            if (duLieu.getKhachHang().get(i).getId().equals(id)) {
+                duLieu.getKhachHang().remove(i);
+            }
+        }
+        for (int i = duLieu.getLichSuKhachHang().size() - 1; i >= 0; i--) {
+            if (duLieu.getLichSuKhachHang().get(i).getKhachHangId().equals(id)) {
+                duLieu.getLichSuKhachHang().remove(i);
+            }
+        }
     }
 
     private void kiemTra(KhachHang kh) {
@@ -91,8 +98,9 @@ public class KhachHangDAO {
             throw new IllegalArgumentException("Họ tên từ 2–100 ký tự, không chứa chữ số hoặc ký tự lạ.");
         if (!kh.getSoDienThoai().matches("0[35789][0-9]{8}"))
             throw new IllegalArgumentException("Số điện thoại di động gồm 10 chữ số, đầu 03/05/07/08/09 (hoặc +84).");
-        if (!kh.getEmail().isEmpty() && (kh.getEmail().length() > 254 || kh.getEmail().startsWith(".") || kh.getEmail().contains(".@") || kh.getEmail().contains("..") || !kh.getEmail().matches("[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?:\\.[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)+")))
+        if (!emailHopLe(kh.getEmail())) {
             throw new IllegalArgumentException("Email không hợp lệ.");
+        }
         if (kh.getDiaChi().length() > 300 || kh.getGhiChu().length() > 1000)
             throw new IllegalArgumentException("Địa chỉ tối đa 300 ký tự, ghi chú tối đa 1.000 ký tự.");
         if (kh.getNgaySinh() != null && (kh.getNgaySinh().isAfter(LocalDate.now()) || kh.getNgaySinh().isBefore(LocalDate.now().minusYears(120))))
@@ -104,6 +112,26 @@ public class KhachHangDAO {
         }
     }
 
+    private boolean emailHopLe(String email) {
+        if (email.isEmpty()) return true; // Email không bắt buộc.
+        if (email.length() > 254) return false;
+        int viTriAt = email.indexOf('@');
+        if (viTriAt <= 0 || viTriAt != email.lastIndexOf('@')) return false;
+
+        String ten = email.substring(0, viTriAt);
+        String tenMien = email.substring(viTriAt + 1);
+        if (ten.startsWith(".") || ten.endsWith(".") || ten.contains("..")) return false;
+        if (!ten.matches("[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+")) return false;
+
+        String[] cacPhan = tenMien.split("\\.", -1);
+        if (cacPhan.length < 2) return false;
+        for (String phan : cacPhan) {
+            if (phan.isEmpty() || phan.startsWith("-") || phan.endsWith("-")) return false;
+            if (!phan.matches("[A-Za-z0-9-]+")) return false;
+        }
+        return true;
+    }
+
     private static String chuoi(String text) { return text == null ? "" : text.trim(); }
 
     private void ghiLichSu(String id, String loai, String noiDung) {
@@ -113,18 +141,46 @@ public class KhachHangDAO {
     public ArrayList<LichSuKhachHang> layLichSu(String id) {
         batBuoc(id);
         ArrayList<LichSuKhachHang> result = new ArrayList<>();
-        for (LichSuKhachHang ls : duLieu.getLichSuKhachHang()) if (ls.getKhachHangId().equals(id)) result.add(new LichSuKhachHang(ls));
-        Collections.reverse(result); // Cùng thời điểm: hoạt động thêm sau đứng trước.
-        result.sort(Comparator.comparing(LichSuKhachHang::getThoiGian).reversed());
+        // Duyệt từ cuối để hoạt động thêm sau đứng trước khi trùng thời điểm.
+        for (int i = duLieu.getLichSuKhachHang().size() - 1; i >= 0; i--) {
+            LichSuKhachHang item = duLieu.getLichSuKhachHang().get(i);
+            if (item.getKhachHangId().equals(id)) {
+                result.add(new LichSuKhachHang(item));
+            }
+        }
+        // Sắp xếp chèn theo thời gian giảm dần, giữ thứ tự khi thời gian bằng nhau.
+        for (int i = 1; i < result.size(); i++) {
+            LichSuKhachHang item = result.get(i);
+            int j = i - 1;
+            while (j >= 0 && result.get(j).getThoiGian().isBefore(item.getThoiGian())) {
+                result.set(j + 1, result.get(j));
+                j--;
+            }
+            result.set(j + 1, item);
+        }
         return result;
     }
 
     public ArrayList<GiaoDichKhachHang> layGiaoDich(String id) {
         batBuoc(id);
         ArrayList<GiaoDichKhachHang> result = new ArrayList<>();
-        for (GiaoDichKhachHang gd : duLieu.getGiaoDichKhachHang()) if (gd.getKhachHangId().equals(id)) result.add(new GiaoDichKhachHang(gd));
-        Collections.reverse(result);
-        result.sort(Comparator.comparing(GiaoDichKhachHang::getThoiGian).reversed());
+        // Duyệt từ cuối để hoạt động thêm sau đứng trước khi trùng thời điểm.
+        for (int i = duLieu.getGiaoDichKhachHang().size() - 1; i >= 0; i--) {
+            GiaoDichKhachHang item = duLieu.getGiaoDichKhachHang().get(i);
+            if (item.getKhachHangId().equals(id)) {
+                result.add(new GiaoDichKhachHang(item));
+            }
+        }
+        // Sắp xếp chèn theo thời gian giảm dần, giữ thứ tự khi thời gian bằng nhau.
+        for (int i = 1; i < result.size(); i++) {
+            GiaoDichKhachHang item = result.get(i);
+            int j = i - 1;
+            while (j >= 0 && result.get(j).getThoiGian().isBefore(item.getThoiGian())) {
+                result.set(j + 1, result.get(j));
+                j--;
+            }
+            result.set(j + 1, item);
+        }
         return result;
     }
 
@@ -187,14 +243,14 @@ public class KhachHangDAO {
 
     public ArrayList<KhachHang> timKiem(String tuKhoa, String hang, Boolean hoatDong, LocalDate tuNgay, LocalDate denNgay) {
         if (tuNgay != null && denNgay != null && tuNgay.isAfter(denNgay)) throw new IllegalArgumentException("Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.");
-        String[] tokens = SanPhamDAO.chuanHoaTimKiem(chuoi(tuKhoa)).split("\\s+");
+        String[] tokens = chuanHoaTimKiem(chuoi(tuKhoa)).split("\\s+");
         ArrayList<KhachHang> result = new ArrayList<>();
         for (KhachHang kh : layTatCa()) {
             if (hoatDong != null && hoatDong != kh.isDangHoatDong()) continue;
             if (hang != null && !hang.equals(layHang(kh.getId()).getTen())) continue;
             LocalDate ngay = kh.getTaoLuc().toLocalDate();
             if (tuNgay != null && ngay.isBefore(tuNgay) || denNgay != null && ngay.isAfter(denNgay)) continue;
-            String text = SanPhamDAO.chuanHoaTimKiem(kh.getId() + " " + kh.getHoTen() + " " + kh.getSoDienThoai() + " " + kh.getEmail());
+            String text = chuanHoaTimKiem(kh.getId() + " " + kh.getHoTen() + " " + kh.getSoDienThoai() + " " + kh.getEmail());
             boolean khop = true;
             for (String token : tokens) if (!text.contains(token)) { khop = false; break; }
             if (khop) result.add(kh);
@@ -203,17 +259,38 @@ public class KhachHangDAO {
     }
 
     public void sapXep(ArrayList<KhachHang> ds, int kieu) {
-        Collections.sort(ds, new Comparator<KhachHang>() {
-            @Override public int compare(KhachHang a, KhachHang b) {
-                int c;
-                if (kieu == 2 || kieu == 3) {
-                    c = tongChiTieu(a.getId()).compareTo(tongChiTieu(b.getId()));
-                    if (kieu == 3) c = -c;
-                } else if (kieu == 4) c = b.getTaoLuc().compareTo(a.getTaoLuc());
-                else { c = SanPhamDAO.chuanHoaTimKiem(a.getHoTen()).compareTo(SanPhamDAO.chuanHoaTimKiem(b.getHoTen())); if (kieu == 1) c = -c; }
-                return c == 0 ? a.getId().compareTo(b.getId()) : c;
+        // Sắp xếp chèn: đưa từng khách hàng về đúng vị trí trong danh sách.
+        for (int i = 1; i < ds.size(); i++) {
+            KhachHang item = ds.get(i);
+            int j = i - 1;
+            while (j >= 0 && soSanh(ds.get(j), item, kieu) > 0) {
+                ds.set(j + 1, ds.get(j));
+                j--;
             }
-        });
+            ds.set(j + 1, item);
+        }
+    }
+
+    private int soSanh(KhachHang a, KhachHang b, int kieu) {
+        int ketQua;
+        if (kieu == 2) {
+            ketQua = tongChiTieu(a.getId()).compareTo(tongChiTieu(b.getId()));
+        } else if (kieu == 3) {
+            ketQua = tongChiTieu(b.getId()).compareTo(tongChiTieu(a.getId()));
+        } else if (kieu == 4) {
+            ketQua = b.getTaoLuc().compareTo(a.getTaoLuc());
+        } else {
+            ketQua = chuanHoaTimKiem(a.getHoTen()).compareTo(chuanHoaTimKiem(b.getHoTen()));
+            if (kieu == 1) ketQua = -ketQua;
+        }
+        if (ketQua == 0) ketQua = a.getId().compareTo(b.getId());
+        return ketQua;
+    }
+
+    private String chuanHoaTimKiem(String value) {
+        if (value == null) return "";
+        String result = Normalizer.normalize(value, Normalizer.Form.NFD).replaceAll("\\p{M}", "");
+        return result.replace('đ', 'd').replace('Đ', 'D').toLowerCase(Locale.ROOT).trim().replaceAll("\\s+", " ");
     }
 
     public ArrayList<KhachHang> nguoiNhanKhuyenMai(String hang) {
@@ -239,9 +316,23 @@ public class KhachHangDAO {
     public ArrayList<ThongBaoKhuyenMai> layThongBao(String id) {
         batBuoc(id);
         ArrayList<ThongBaoKhuyenMai> result = new ArrayList<>();
-        for (ThongBaoKhuyenMai tb : duLieu.getThongBaoKhuyenMai()) if (tb.getKhachHangId().equals(id)) result.add(new ThongBaoKhuyenMai(tb));
-        Collections.reverse(result);
-        result.sort(Comparator.comparing(ThongBaoKhuyenMai::getTaoLuc).reversed());
+        // Duyệt từ cuối để hoạt động thêm sau đứng trước khi trùng thời điểm.
+        for (int i = duLieu.getThongBaoKhuyenMai().size() - 1; i >= 0; i--) {
+            ThongBaoKhuyenMai item = duLieu.getThongBaoKhuyenMai().get(i);
+            if (item.getKhachHangId().equals(id)) {
+                result.add(new ThongBaoKhuyenMai(item));
+            }
+        }
+        // Sắp xếp chèn theo thời gian giảm dần, giữ thứ tự khi thời gian bằng nhau.
+        for (int i = 1; i < result.size(); i++) {
+            ThongBaoKhuyenMai item = result.get(i);
+            int j = i - 1;
+            while (j >= 0 && result.get(j).getTaoLuc().isBefore(item.getTaoLuc())) {
+                result.set(j + 1, result.get(j));
+                j--;
+            }
+            result.set(j + 1, item);
+        }
         return result;
     }
 }

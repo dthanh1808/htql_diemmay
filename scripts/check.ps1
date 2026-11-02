@@ -10,7 +10,8 @@ if ($JavaHome) {
 }
 if (-not (Test-Path -LiteralPath $compiler)) { throw "Khong tim thay javac: $compiler" }
 $runtime = Join-Path (Split-Path -Parent $compiler) 'java.exe'
-$classes = Join-Path $repoRoot 'build/classes'
+# Dùng cùng thư mục biên dịch với Eclipse để tránh kiểm tra một bản nhưng chạy bản cũ.
+$classes = Join-Path $repoRoot 'bin'
 $testData = Join-Path $repoRoot 'build/test-data'
 New-Item -ItemType Directory -Path $classes, $testData -Force | Out-Null
 $sourceFiles = @(Get-ChildItem -LiteralPath (Join-Path $repoRoot 'src'), (Join-Path $repoRoot 'test') -Recurse -Filter '*.java' | ForEach-Object { $_.FullName })
