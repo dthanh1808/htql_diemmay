@@ -8,7 +8,12 @@ import entity.SanPham;
 
 import java.awt.*;
 import java.awt.event.*;
+import java.net.URL;
+import java.text.NumberFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Locale;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.DocumentEvent;
@@ -28,7 +33,7 @@ public class PNL_BanHang extends JPanel {
     private JPanel pnlCustCenter;
     
     // --- Các hành động (Callbacks) chuyển màn hình ---
-    private Runnable invoiceAction = () -> JOptionPane.showMessageDialog(this, "Mở mục Hóa đơn → Lập hóa đơn để mở ca và thanh toán.");
+    private Runnable invoiceAction;
     private Runnable addCustomerAction = () -> JOptionPane.showMessageDialog(this, "Chuyển sang tab Khách Hàng để thêm mới.");
 
     // --- Biến Khách Hàng ---
@@ -60,14 +65,17 @@ public class PNL_BanHang extends JPanel {
     private JLabel lblKhuyenMaiVal;
     private JLabel lblTotalVal;
 
-    // Constructor hỗ trợ cả 2 hành động chuyển tab
+    // --- Biến Giao hàng & Thanh toán ---
+    private JCheckBox chkDelivery;
+    private JTextField txtAddress;
+    private JRadioButton radTienMat, radChuyenKhoan;
+
     public PNL_BanHang(Runnable invoiceAction, Runnable addCustomerAction) {
         this();
         if(invoiceAction != null) this.invoiceAction = invoiceAction;
         if(addCustomerAction != null) this.addCustomerAction = addCustomerAction;
     }
     
-    // Đề phòng trường hợp bạn chỉ gọi 1 action
     public PNL_BanHang(Runnable invoiceAction) {
         this(invoiceAction, null);
     }
@@ -192,7 +200,6 @@ public class PNL_BanHang extends JPanel {
         btnAddCust.setFocusPainted(false);
         btnAddCust.setBorderPainted(false);
         
-        // => GẮN SỰ KIỆN CHUYỂN MÀN HÌNH VÀO NÚT NÀY
         btnAddCust.addActionListener(e -> addCustomerAction.run());
 
         pnlCustActions.add(radVangLai);
@@ -543,24 +550,26 @@ public class PNL_BanHang extends JPanel {
         pnlRight.add(pnlRightTopContent, BorderLayout.NORTH);
 
         // =========================================================================
-        // PHẦN CHECKOUT: GIAO HÀNG & NÚT THANH TOÁN
+        // PHẦN CHECKOUT: GIAO HÀNG, THANH TOÁN & NÚT THANH TOÁN
         // =========================================================================
         RoundedPanel pnlCheckoutSection = new RoundedPanel(12, bgWhite);
         pnlCheckoutSection.setLayout(new BorderLayout(0, 10)); 
         pnlCheckoutSection.setBorder(new EmptyBorder(12, 12, 12, 12));
 
-        // --- Option Giao Hàng & Địa Chỉ ---
-        JPanel pnlDelivery = new JPanel();
-        pnlDelivery.setLayout(new BoxLayout(pnlDelivery, BoxLayout.Y_AXIS));
-        pnlDelivery.setOpaque(false);
+        JPanel pnlDeliveryAndPayment = new JPanel();
+        pnlDeliveryAndPayment.setLayout(new BoxLayout(pnlDeliveryAndPayment, BoxLayout.Y_AXIS));
+        pnlDeliveryAndPayment.setOpaque(false);
+        pnlDeliveryAndPayment.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JCheckBox chkDelivery = new JCheckBox(" Yêu cầu Giao hàng & Lắp đặt");
+        // --- 1. Giao hàng & Lắp đặt ---
+        chkDelivery = new JCheckBox(" Yêu cầu Giao hàng & Lắp đặt");
         chkDelivery.setFont(new Font("Segoe UI", Font.BOLD, 12));
         chkDelivery.setForeground(textDark);
         chkDelivery.setOpaque(false);
         chkDelivery.setFocusPainted(false);
+        chkDelivery.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JTextField txtAddress = new JTextField(" Nhập địa chỉ / ghi chú giao hàng...");
+        txtAddress = new JTextField(" Nhập địa chỉ / ghi chú giao hàng...");
         txtAddress.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         txtAddress.setForeground(Color.GRAY);
         txtAddress.setEnabled(false); 
@@ -568,8 +577,8 @@ public class PNL_BanHang extends JPanel {
             BorderFactory.createLineBorder(new Color(210, 210, 210)),
             new EmptyBorder(5, 5, 5, 5)
         ));
-        txtAddress.setPreferredSize(new Dimension(0, 32));
         txtAddress.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
+        txtAddress.setAlignmentX(Component.LEFT_ALIGNMENT);
         
         txtAddress.addFocusListener(new FocusAdapter() {
             @Override
@@ -603,15 +612,47 @@ public class PNL_BanHang extends JPanel {
             }
         });
 
-        pnlDelivery.add(chkDelivery);
-        pnlDelivery.add(Box.createVerticalStrut(8));
-        pnlDelivery.add(txtAddress);
+        pnlDeliveryAndPayment.add(chkDelivery);
+        pnlDeliveryAndPayment.add(Box.createVerticalStrut(6));
+        pnlDeliveryAndPayment.add(txtAddress);
+        pnlDeliveryAndPayment.add(Box.createVerticalStrut(12));
 
-        pnlCheckoutSection.add(pnlDelivery, BorderLayout.CENTER);
+        // --- 2. Hình thức thanh toán ---
+        JLabel lblPayTitle = new JLabel("Hình thức thanh toán:");
+        lblPayTitle.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        lblPayTitle.setForeground(textDark);
+        lblPayTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JPanel pnlPayOptions = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        pnlPayOptions.setOpaque(false);
+        pnlPayOptions.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        radTienMat = new JRadioButton("Tiền mặt", true);
+        radTienMat.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        radTienMat.setOpaque(false);
+        radTienMat.setFocusPainted(false);
+
+        radChuyenKhoan = new JRadioButton("Chuyển khoản");
+        radChuyenKhoan.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        radChuyenKhoan.setOpaque(false);
+        radChuyenKhoan.setFocusPainted(false);
+        radChuyenKhoan.setBorder(BorderFactory.createEmptyBorder(0, 15, 0, 0));
+
+        ButtonGroup payGroup = new ButtonGroup();
+        payGroup.add(radTienMat);
+        payGroup.add(radChuyenKhoan);
+
+        pnlPayOptions.add(radTienMat);
+        pnlPayOptions.add(radChuyenKhoan);
+
+        pnlDeliveryAndPayment.add(lblPayTitle);
+        pnlDeliveryAndPayment.add(Box.createVerticalStrut(4));
+        pnlDeliveryAndPayment.add(pnlPayOptions);
+
+        pnlCheckoutSection.add(pnlDeliveryAndPayment, BorderLayout.CENTER);
 
         // --- Nút Thanh Toán ---
         JButton btnCheckout = new JButton("Thanh toán →");
-        btnCheckout.addActionListener(e -> invoiceAction.run());
         btnCheckout.setBackground(colorBlue);
         btnCheckout.setForeground(Color.WHITE);
         btnCheckout.setFont(new Font("Segoe UI", Font.BOLD, 15));
@@ -620,14 +661,232 @@ public class PNL_BanHang extends JPanel {
         btnCheckout.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnCheckout.setPreferredSize(new Dimension(0, 46));
 
+        // Sự kiện khi bấm Thanh toán -> Hiện Pop-up hóa đơn điện tử
+        btnCheckout.addActionListener(e -> hienThiPopUpHoaDon());
+
         pnlCheckoutSection.add(btnCheckout, BorderLayout.SOUTH);
-        
         pnlRight.add(pnlCheckoutSection, BorderLayout.SOUTH);
 
         add(pnlRight, BorderLayout.EAST);
 
         setupCustomerEvents();
         setupProductEvents();
+    }
+
+    // =========================================================================
+    // HÀM HIỂN THỊ POP-UP HÓA ĐƠN ĐIỆN TỬ (ĐÃ CẬP NHẬT THEO YÊU CẦU)
+    // =========================================================================
+    private void hienThiPopUpHoaDon() {
+        if (tableModel.getRowCount() == 0) {
+            JOptionPane.showMessageDialog(this, "Hóa đơn chưa có sản phẩm nào!", "Thông báo", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Hóa đơn điện tử", true);
+        
+        JPanel pnlSheet = new JPanel();
+        pnlSheet.setLayout(new BoxLayout(pnlSheet, BoxLayout.Y_AXIS));
+        pnlSheet.setBackground(Color.WHITE);
+        pnlSheet.setBorder(new EmptyBorder(15, 20, 15, 20));
+
+        // 1. Tiêu đề (ĐÃ BỎ CHỮ "Thanh toán thành công" THEO YÊU CẦU)
+        JLabel lblTitle = new JLabel("Hóa đơn điện tử", SwingConstants.CENTER);
+        lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        lblTitle.setForeground(colorBlue);
+        lblTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        pnlSheet.add(lblTitle);
+        pnlSheet.add(Box.createVerticalStrut(10));
+
+        // Thông tin meta
+        JPanel pnlMeta = new JPanel(new GridLayout(2, 2, 10, 3));
+        pnlMeta.setOpaque(false);
+        pnlMeta.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+        pnlMeta.add(new JLabel("Mã hóa đơn: HD" + (System.currentTimeMillis() % 100000000)));
+        pnlMeta.add(new JLabel("Ngày lập: " + LocalDateTime.now().format(dtf)));
+        pnlMeta.add(new JLabel("Nhân viên lập: Nguyễn Văn A"));
+        pnlMeta.add(new JLabel("Trạng thái: Đã thanh toán"));
+
+        for (Component c : pnlMeta.getComponents()) {
+            c.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+            ((JLabel) c).setForeground(textGray);
+        }
+        pnlSheet.add(pnlMeta);
+        pnlSheet.add(Box.createVerticalStrut(8));
+        pnlSheet.add(new JSeparator());
+        pnlSheet.add(Box.createVerticalStrut(8));
+
+        // Thông tin khách hàng
+        JPanel pnlCust = new JPanel(new BorderLayout());
+        pnlCust.setOpaque(false);
+        pnlCust.setMaximumSize(new Dimension(Integer.MAX_VALUE, 25));
+
+        String tenKH = (currentKhachHang != null) ? currentKhachHang.getHoTen() : "Khách hàng vãng lai";
+        String sdtKH = (currentKhachHang != null) ? currentKhachHang.getSoDienThoai() : "---";
+        
+        JLabel lblCustName = new JLabel(tenKH);
+        lblCustName.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        JLabel lblCustPhone = new JLabel(sdtKH);
+        lblCustPhone.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+
+        pnlCust.add(lblCustName, BorderLayout.WEST);
+        pnlCust.add(lblCustPhone, BorderLayout.EAST);
+        pnlSheet.add(pnlCust);
+        pnlSheet.add(Box.createVerticalStrut(6));
+
+        // Bảng sản phẩm
+        String[] cols = {"STT", "Sản phẩm", "SL", "Đơn giá", "Thành tiền"};
+        DefaultTableModel invModel = new DefaultTableModel(cols, 0);
+        for (int i = 0; i < tableModel.getRowCount(); i++) {
+            invModel.addRow(new Object[]{
+                tableModel.getValueAt(i, 0),
+                tableModel.getValueAt(i, 1),
+                tableModel.getValueAt(i, 4),
+                tableModel.getValueAt(i, 3),
+                tableModel.getValueAt(i, 5)
+            });
+        }
+        JTable invTable = new JTable(invModel);
+        int rowHeight = 28;
+        invTable.setRowHeight(rowHeight);
+        invTable.setEnabled(false);
+        invTable.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        
+        int tablePreferredHeight = Math.min(invModel.getRowCount() * rowHeight + 28, 160);
+        
+        JScrollPane scrollTable = new JScrollPane(invTable);
+        scrollTable.setPreferredSize(new Dimension(450, tablePreferredHeight));
+        scrollTable.setMaximumSize(new Dimension(Integer.MAX_VALUE, tablePreferredHeight));
+        pnlSheet.add(scrollTable);
+        pnlSheet.add(Box.createVerticalStrut(8));
+
+        // Tính tiền
+        long tamTinh = 0;
+        for (int i = 0; i < tableModel.getRowCount(); i++) {
+            String t = tableModel.getValueAt(i, 5).toString().replaceAll("[^0-9]", "");
+            if (!t.isEmpty()) tamTinh += Long.parseLong(t);
+        }
+
+        long khuyenMai = 0;
+        if (currentKhachHang != null) {
+            HangThanhVien h = khachHangDAO.layHang(currentKhachHang.getId());
+            if (h != null && h.getPhanTramUuDai() > 0) {
+                khuyenMai = (long) (tamTinh * (h.getPhanTramUuDai() / 100.0));
+            }
+        }
+        long tongThanhToan = tamTinh - khuyenMai;
+        if (tongThanhToan < 0) tongThanhToan = 0;
+
+        NumberFormat nf = NumberFormat.getInstance(new Locale("vi", "VN"));
+        pnlSheet.add(createSummaryRow("Tạm tính", nf.format(tamTinh) + " đ", false));
+        pnlSheet.add(createSummaryRow("Khuyến mãi", "-" + nf.format(khuyenMai) + " đ", false));
+        pnlSheet.add(createSummaryRow("Tổng tiền thanh toán", nf.format(tongThanhToan) + " đ", true));
+        
+        String hinhThuc = radChuyenKhoan.isSelected() ? "Chuyển khoản" : "Tiền mặt";
+        pnlSheet.add(createSummaryRow("Phương thức thanh toán", hinhThuc, false));
+
+        pnlSheet.add(Box.createVerticalStrut(6));
+        pnlSheet.add(new JSeparator());
+        pnlSheet.add(Box.createVerticalStrut(6));
+
+        // 2. Giao hàng (ĐÃ ÉP SÁT LỀ TRÁI DÙNG BINDING XBOX / PANEL LEFT ALIGNMENT)
+        JPanel pnlDeliv = new JPanel();
+        pnlDeliv.setLayout(new BoxLayout(pnlDeliv, BoxLayout.Y_AXIS));
+        pnlDeliv.setOpaque(false);
+        pnlDeliv.setAlignmentX(Component.LEFT_ALIGNMENT); // Căn lề trái
+
+        JLabel dTitle = new JLabel("Giao hàng & Lắp đặt");
+        dTitle.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        dTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
+        pnlDeliv.add(dTitle);
+        
+        boolean isGiao = chkDelivery.isSelected();
+        JLabel dStatus = new JLabel("Yêu cầu giao hàng & lắp đặt: " + (isGiao ? "Có" : "Không"));
+        dStatus.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        dStatus.setAlignmentX(Component.LEFT_ALIGNMENT);
+        pnlDeliv.add(dStatus);
+
+        if (isGiao) {
+            String addr = txtAddress.getText().equals(" Nhập địa chỉ / ghi chú giao hàng...") ? "Không có địa chỉ cụ thể" : txtAddress.getText();
+            JLabel dAddr = new JLabel("📍 Địa chỉ: " + addr);
+            dAddr.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+            dAddr.setAlignmentX(Component.LEFT_ALIGNMENT);
+            pnlDeliv.add(Box.createVerticalStrut(2));
+            pnlDeliv.add(dAddr);
+        }
+        pnlSheet.add(pnlDeliv);
+
+        // QR Code nếu chuyển khoản
+        if ("Chuyển khoản".equals(hinhThuc)) {
+            pnlSheet.add(Box.createVerticalStrut(8));
+            pnlSheet.add(new JSeparator());
+            pnlSheet.add(Box.createVerticalStrut(8));
+
+            JLabel qrTitle = new JLabel("Quét mã QR chuyển khoản");
+            qrTitle.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            qrTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
+            pnlSheet.add(qrTitle);
+            pnlSheet.add(Box.createVerticalStrut(4));
+
+            try {
+                String qrUrl = "https://img.vietqr.io/image/970422-0361112233-compact2.png?amount=" + tongThanhToan + "&addInfo=Thanh%20toan%20HD";
+                ImageIcon qrIcon = new ImageIcon(new URL(qrUrl));
+                Image scaledQR = qrIcon.getImage().getScaledInstance(100, 100, Image.SCALE_SMOOTH);
+                JLabel lblQR = new JLabel(new ImageIcon(scaledQR));
+                lblQR.setAlignmentX(Component.CENTER_ALIGNMENT);
+                pnlSheet.add(lblQR);
+            } catch (Exception ex) {
+                JLabel errQR = new JLabel("(Không thể tải mã QR)");
+                errQR.setAlignmentX(Component.CENTER_ALIGNMENT);
+                pnlSheet.add(errQR);
+            }
+        }
+
+        JScrollPane scrollSheet = new JScrollPane(pnlSheet);
+        scrollSheet.setBorder(BorderFactory.createEmptyBorder());
+        dialog.add(scrollSheet, BorderLayout.CENTER);
+
+        // 3. ĐÃ BỎ NÚT Ở PHÍA DƯỚI CÙNG THEO YÊU CẦU (Không add pnlBtn chứa nút nữa)
+
+        // Khi đóng dialog (bấm nút X của cửa sổ), tự động làm mới lại bảng bán hàng
+        dialog.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosed(WindowEvent e) {
+                tableModel.setRowCount(0);
+                capNhatTongTien();
+            }
+        });
+
+        dialog.pack();
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
+    }
+
+    private JPanel createSummaryRow(String label, String value, boolean isBold) {
+        JPanel row = new JPanel(new BorderLayout());
+        row.setOpaque(false);
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 22));
+
+        JLabel lblKey = new JLabel(label);
+        JLabel lblVal = new JLabel(value);
+
+        Font font = new Font("Segoe UI", isBold ? Font.BOLD : Font.PLAIN, isBold ? 12 : 11);
+        lblKey.setFont(font);
+        lblVal.setFont(font);
+
+        if (isBold) {
+            lblKey.setForeground(colorBlue);
+            lblVal.setForeground(colorBlue);
+        } else {
+            lblKey.setForeground(textGray);
+            lblVal.setForeground(textDark);
+        }
+
+        row.add(lblKey, BorderLayout.WEST);
+        row.add(lblVal, BorderLayout.EAST);
+        return row;
     }
 
     private void capNhatTongTien() {
