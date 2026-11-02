@@ -1319,4 +1319,5 @@ private void showEditor(String id) {
                     () -> showList(), () -> viewLayout.show(views, "categories"));
         }
     }
+   
 }
