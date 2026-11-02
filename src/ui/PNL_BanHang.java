@@ -13,6 +13,12 @@ public class PNL_BanHang extends JPanel {
     private Color colorBlue = new Color(37, 99, 235);
     private Color bgHover = new Color(239, 246, 255);
     private JPanel pnlCustCenter;
+    private Runnable invoiceAction = () -> JOptionPane.showMessageDialog(this, "Mở mục Hóa đơn → Lập hóa đơn để mở ca và thanh toán.");
+
+    public PNL_BanHang(Runnable invoiceAction) {
+        this();
+        this.invoiceAction = invoiceAction;
+    }
 
     class RoundedPanel extends JPanel {
         private int cornerRadius;
@@ -544,6 +550,7 @@ public class PNL_BanHang extends JPanel {
         pnlCheckoutSection.setBorder(new EmptyBorder(12, 12, 12, 12));
 
         JButton btnCheckout = new JButton("Thanh toán →");
+        btnCheckout.addActionListener(e -> invoiceAction.run());
         btnCheckout.setBackground(colorBlue);
         btnCheckout.setForeground(Color.WHITE);
         btnCheckout.setFont(new Font("Segoe UI", Font.BOLD, 15));
