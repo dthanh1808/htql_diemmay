@@ -894,5 +894,12 @@ public class UI_KhachHang extends JPanel {
         else save.run();
     }
     
+ // ================== CÁC HÀM PUBLIC ĐỂ TRANG CHỦ GỌI ==================
+    public void moFormDangKy() {
+        editor(null); 
+    }
 
+    public void moDanhSach() {
+        backToList(); 
+    }
 }
