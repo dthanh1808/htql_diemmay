@@ -9,19 +9,7 @@ public class ConnectDB {
     private static Connection connection;
 
     private ConnectDB() {
-<<<<<<< HEAD
         // Kết nối được mở khi cần; lỗi được chuyển cho bên gọi.
-=======
-        try {
-            // Thay đổi cấu hình này theo SQL Server của bạn
-        	String url = "jdbc:sqlserver://localhost:1433;databaseName=QuanLyBanHang;encrypt=true;trustServerCertificate=true;";            
-        	String user = "sa"; // User SQL của bạn
-            String password = "123456"; // Password SQL của bạn
-            connection = DriverManager.getConnection(url, user, password);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
->>>>>>> 957a42b1ddd343adedd740681bfd7a592402b483
     }
 
     public static ConnectDB getInstance() {
@@ -31,7 +19,6 @@ public class ConnectDB {
         return instance;
     }
 
-<<<<<<< HEAD
     public static synchronized Connection getConnection() {
         try {
             if(connection==null || connection.isClosed()) connection=openConnection();
@@ -59,9 +46,3 @@ public class ConnectDB {
         String value=System.getenv(env);return value==null?fallback:value;
     }
 }
-=======
-    public static Connection getConnection() {
-        return connection;
-    }
-}
->>>>>>> 957a42b1ddd343adedd740681bfd7a592402b483
