@@ -6,8 +6,8 @@ public class ChiTietHoaDon {
     private int soLuong;
     private double donGia;
     private double thanhTien;
-    private SanPham sp;
-    private HoaDon hd;
+    private SanPham sanPham;
+    private HoaDon hoaDon;
 
     public ChiTietHoaDon() {
     }
@@ -15,8 +15,8 @@ public class ChiTietHoaDon {
     public ChiTietHoaDon(int soLuong, double donGia, SanPham sp, HoaDon hd) {
         setSoLuong(soLuong);
         setDonGia(donGia);
-        this.sp = sp;
-        this.hd = hd;
+        this.sanPham = sp;
+        this.hoaDon = hd;
         this.thanhTien = tinhThanhTien();
     }
 
@@ -53,24 +53,24 @@ public class ChiTietHoaDon {
     }
 
     public SanPham getSp() {
-        return sp;
+        return sanPham;
     }
 
     public void setSp(SanPham sp) {
-        this.sp = sp;
+        this.sanPham = sp;
     }
 
     public HoaDon getHd() {
-        return hd;
+        return hoaDon;
     }
 
     public void setHd(HoaDon hd) {
-        this.hd = hd;
+        this.hoaDon = hd;
     }
 
     @Override
     public String toString() {
         return "ChiTietHoaDon [soLuong=" + soLuong + ", donGia=" + donGia + ", thanhTien=" + thanhTien 
-                + ", sp=" + (sp != null ? sp.getTen() : null) + "]";
+                + ", sp=" + (sanPham != null ? sanPham.getTenSP() : null) + "]";
     }
 }

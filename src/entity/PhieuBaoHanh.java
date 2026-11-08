@@ -6,32 +6,38 @@ public class PhieuBaoHanh {
     private String maPhieu;
     private String soSerial;
     private String loaiBaoHanh;
-    private SanPham sp;
-    private KhachHang kh;
-    private NhanVien nv;
-    private Date ngayTiepNhan;
+    private Date ngayTiepNhan;																																																																																									
     private Date ngayHenTra;
     private String ghiChu;
     private double chiPhiSuaChua;
     private String trangThai;
-
+    private SanPham sanPham;
+    private KhachHang khachHang;
+    private NhanVien nhanVien;
+    private HoaDon hoaDon;
+    
     public PhieuBaoHanh() {
     }
 
-    public PhieuBaoHanh(String maPhieu, String soSerial, SanPham sp, KhachHang kh, NhanVien nv, Date ngayTiepNhan, Date ngayHenTra, String ghiChuS, double chiPhiSuaChua, String trangThai) {
-        this.maPhieu = maPhieu;
-        this.soSerial = soSerial;
-        this.sp = sp;
-        this.kh = kh;
-        this.nv = nv;
-        this.ngayTiepNhan = ngayTiepNhan;
-        this.ngayHenTra = ngayHenTra;
-        this.ghiChu = ghiChu;
-        this.chiPhiSuaChua = chiPhiSuaChua;
-        this.trangThai = trangThai;
-    }
+    public PhieuBaoHanh(String maPhieu, String soSerial, String loaiBaoHanh, Date ngayTiepNhan, Date ngayHenTra,
+			String ghiChu, double chiPhiSuaChua, String trangThai, SanPham sanPham, KhachHang khachHang,
+			NhanVien nhanVien, HoaDon hoaDon) {
+		super();
+		this.maPhieu = maPhieu;
+		this.soSerial = soSerial;
+		this.loaiBaoHanh = loaiBaoHanh;
+		this.ngayTiepNhan = ngayTiepNhan;
+		this.ngayHenTra = ngayHenTra;
+		this.ghiChu = ghiChu;
+		this.chiPhiSuaChua = chiPhiSuaChua;
+		this.trangThai = trangThai;
+		this.sanPham = sanPham;
+		this.khachHang = khachHang;
+		this.nhanVien = nhanVien;
+		this.hoaDon = hoaDon;
+	}
 
-    public String getMaPhieu() {
+	public String getMaPhieu() {
 		return maPhieu;
 	}
 
@@ -53,30 +59,6 @@ public class PhieuBaoHanh {
 
 	public void setLoaiBaoHanh(String loaiBaoHanh) {
 		this.loaiBaoHanh = loaiBaoHanh;
-	}
-
-	public SanPham getSp() {
-		return sp;
-	}
-
-	public void setSp(SanPham sp) {
-		this.sp = sp;
-	}
-
-	public KhachHang getKh() {
-		return kh;
-	}
-
-	public void setKh(KhachHang kh) {
-		this.kh = kh;
-	}
-
-	public NhanVien getNv() {
-		return nv;
-	}
-
-	public void setNv(NhanVien nv) {
-		this.nv = nv;
 	}
 
 	public Date getNgayTiepNhan() {
@@ -119,14 +101,47 @@ public class PhieuBaoHanh {
 		this.trangThai = trangThai;
 	}
 
+	public SanPham getSanPham() {
+		return sanPham;
+	}
+
+	public void setSanPham(SanPham sanPham) {
+		this.sanPham = sanPham;
+	}
+
+	public KhachHang getKhachHang() {
+		return khachHang;
+	}
+
+	public void setKhachHang(KhachHang khachHang) {
+		this.khachHang = khachHang;
+	}
+
+	public NhanVien getNhanVien() {
+		return nhanVien;
+	}
+
+	public void setNhanVien(NhanVien nhanVien) {
+		this.nhanVien = nhanVien;
+	}
+
+	public HoaDon getHoaDon() {
+		return hoaDon;
+	}
+
+	public void setHoaDon(HoaDon hoaDon) {
+		this.hoaDon = hoaDon;
+	}
+
 	@Override
     public String toString() {
         return "PhieuBaoHanh{" +
                 "maPhieu='" + maPhieu + '\'' +
                 ", soSerial='" + soSerial + '\'' +
-                ", sp=" + sp +
-                ", kh=" + kh +
-                ", nv=" + nv +
+                ", sp=" + sanPham +
+                ", kh=" + khachHang +
+                ", nv=" + nhanVien +
+                ", hd=" + hoaDon +
                 ", ngayTiepNhan=" + ngayTiepNhan +
                 ", ngayHenTra=" + ngayHenTra +
                 ", moTa='" + ghiChu + '\'' +

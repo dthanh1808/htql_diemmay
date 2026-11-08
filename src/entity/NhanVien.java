@@ -13,20 +13,15 @@ public class NhanVien {
 	private LocalDate ngaySinh;
 	private String diachi;
 	private String chucVu;
-	private String trangThai; // true: Đang làm việc, false: Nghỉ việc/Tạm nghỉ
-	private String ghiChu;
+	private boolean trangThai; // true: Đang làm việc, false: Nghỉ việc/Tạm nghỉ
 	private Date ngayVaoLam;
-	private TaiKhoan taiKhoan;
 	private String anhDaiDien;
 
 	public NhanVien() {
 	}
 
-	
-
 	public NhanVien(String maNV, String hoTen, boolean gioiTinh, String sdt, String email, LocalDate ngaySinh,
-			String diachi, String chucVu, String trangThai, String ghiChu, Date ngayVaoLam, TaiKhoan taiKhoan,
-			String anhDaiDien) {
+			String diachi, String chucVu, boolean trangThai, Date ngayVaoLam, String anhDaiDien) {
 		super();
 		this.maNV = maNV;
 		this.hoTen = hoTen;
@@ -37,9 +32,7 @@ public class NhanVien {
 		this.diachi = diachi;
 		this.chucVu = chucVu;
 		this.trangThai = trangThai;
-		this.ghiChu = ghiChu;
 		this.ngayVaoLam = ngayVaoLam;
-		this.taiKhoan = taiKhoan;
 		this.anhDaiDien = anhDaiDien;
 	}
 
@@ -123,27 +116,13 @@ public class NhanVien {
 		this.chucVu = chucVu;
 	}	
 
-	public String getTrangThai() {
+	public boolean isTrangThai() {
 		return trangThai;
 	}
 
-
-
-	public void setTrangThai(String trangThai) {
+	public void setTrangThai(boolean trangThai) {
 		this.trangThai = trangThai;
 	}
-
-	public String getGhiChu() {
-		return ghiChu;
-	}
-
-
-
-	public void setGhiChu(String ghiChu) {
-		this.ghiChu = ghiChu;
-	}
-
-
 
 	public Date getNgayVaoLam() {
 		return ngayVaoLam;
@@ -151,14 +130,6 @@ public class NhanVien {
 
 	public void setNgayVaoLam(Date ngayVaoLam) {
 		this.ngayVaoLam = ngayVaoLam;
-	}
-
-	public TaiKhoan getTaiKhoan() {
-		return taiKhoan;
-	}
-
-	public void setTaiKhoan(TaiKhoan taiKhoan) {
-		this.taiKhoan = taiKhoan;
 	}
 
 	public String getAnhDaiDien() {
@@ -173,7 +144,7 @@ public class NhanVien {
 	public String toString() {
 		return "NhanVien [maNV=" + maNV + ", hoTen=" + hoTen + ", gioiTinh=" + gioiTinh + ", sdt=" + sdt + ", email="
 				+ email + ", ngaySinh=" + ngaySinh + ", diachi=" + diachi + ", chucVu=" + chucVu + ", trangThai="
-				+ trangThai + ", ngayVaoLam=" + ngayVaoLam + ", taiKhoan=" + taiKhoan + ", anhDaiDien=" + anhDaiDien
+				+ trangThai + ", ngayVaoLam=" + ngayVaoLam + ", anhDaiDien=" + anhDaiDien
 				+ "]";
 	}
 
