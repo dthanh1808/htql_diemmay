@@ -1,15 +1,13 @@
 package dao;
 
-import connect.ConnectDB;
-import entity.DanhMuc;
 import entity.SanPham;
-import java.sql.*;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.Normalizer;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
@@ -20,230 +18,137 @@ import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 import javax.imageio.stream.ImageInputStream;
 
-/** JDBC cơ bản: mở kết nối, gán tham số, đọc ResultSet và đóng tài nguyên. */
+/** Thêm, sửa, xóa và tìm kiếm sản phẩm trong ArrayList. */
 public class SanPhamDAO {
-    private static final String SELECT = "SELECT s.*,d.tenDanhMuc,d.moTa AS moTaDanhMuc "
-            + "FROM dbo.SanPham s JOIN dbo.DanhMuc d ON d.maDanhMuc=s.maDanhMuc ";
-    public SanPhamDAO() { }
+    private final DuLieuTam duLieu;
+    private final DanhMucDAO danhMucDAO;
 
-    private SanPham docDong(ResultSet r) throws SQLException {
-        String anh = r.getString("anhBase64");
-        String moTa = r.getString("moTa");
-        SanPham sp = new SanPham(r.getString("maNoiBo"), r.getString("maSKU"), r.getString("tenSP"),
-                r.getString("maDanhMuc"), r.getString("thuongHieu"), r.getBigDecimal("donGia"),
-                r.getInt("thoiGianBaoHanh"), r.getBoolean("trangThai"), moTa == null ? "" : moTa,
-                anh == null ? "" : anh, r.getTimestamp("taoLuc").toLocalDateTime(),
-                r.getTimestamp("capNhatLuc").toLocalDateTime());
-        sp.setMaVach(r.getString("maVach")); sp.setModel(r.getString("model"));
-        sp.setNhomSP(r.getString("nhomSanPham")); sp.setMaKM(r.getString("maKM"));
-        sp.setSlTon(r.getInt("slTon"));
-        sp.setDanhMuc(new DanhMuc(sp.getDanhMucId(), r.getString("tenDanhMuc"), r.getString("moTaDanhMuc")));
-        return sp;
+    public SanPhamDAO() { this(DuLieuTam.getMacDinh()); }
+    public SanPhamDAO(DuLieuTam duLieu) {
+        this.duLieu = duLieu;
+        danhMucDAO = new DanhMucDAO(duLieu);
     }
 
     public ArrayList<SanPham> layTatCa() {
-        ArrayList<SanPham> ds = new ArrayList<>();
-        try (Connection c = ConnectDB.openConnection(); PreparedStatement p = c.prepareStatement(SELECT + "ORDER BY s.tenSP");
-                ResultSet r = p.executeQuery()) {
-            while (r.next()) ds.add(docDong(r));
-            return ds;
-        } catch (SQLException e) { throw JdbcHelper.loi(e); }
-    }
-
-    public int demTatCa() {
-        try (Connection c = ConnectDB.openConnection();
-                PreparedStatement p = c.prepareStatement("SELECT COUNT(*) FROM dbo.SanPham");
-                ResultSet r = p.executeQuery()) {
-            r.next(); return r.getInt(1);
-        } catch (SQLException e) { throw JdbcHelper.loi(e); }
-    }
-
-    private SanPham timTheoMa(Connection c, String id) throws SQLException {
-        try (PreparedStatement p = c.prepareStatement(SELECT + "WHERE s.maNoiBo=?")) {
-            p.setString(1, id);
-            try (ResultSet r = p.executeQuery()) { return r.next() ? docDong(r) : null; }
-        }
+        ArrayList<SanPham> ketQua = new ArrayList<>();
+        for (SanPham sp : duLieu.getSanPham()) ketQua.add(new SanPham(sp));
+        return ketQua;
     }
 
     public SanPham timTheoMa(String id) {
-        try (Connection c = ConnectDB.openConnection()) { return timTheoMa(c, id); }
-        catch (SQLException e) { throw JdbcHelper.loi(e); }
+        for (SanPham sp : duLieu.getSanPham()) {
+            if (sp.getId().equals(id)) return new SanPham(sp);
+        }
+        return null;
     }
 
-    private String chuoi(String value) { return value == null ? "" : value.trim().replaceAll("\\s+", " "); }
+    public SanPham them(SanPham sanPham) {
+        if (sanPham == null) throw new IllegalArgumentException("Chưa nhập sản phẩm.");
+        SanPham moi = new SanPham(sanPham);
+        moi.setId(null); // Mã nội bộ do DAO cấp, người nhập chỉ cần nhập SKU.
+        kiemTra(moi);
+        moi.setId(duLieu.taoMaSanPham());
+        moi.setTaoLuc(LocalDateTime.now());
+        moi.setCapNhatLuc(moi.getTaoLuc());
+        duLieu.getSanPham().add(moi);
+        return new SanPham(moi);
+    }
 
-    private void kiemTra(Connection c, SanPham sp) throws SQLException {
-        sp.setSku(chuoi(sp.getSku()).toUpperCase(Locale.ROOT));
-        sp.setTen(chuoi(sp.getTen())); sp.setThuongHieu(chuoi(sp.getThuongHieu()));
-        sp.setMoTa(sp.getMoTa() == null ? "" : sp.getMoTa().trim());
-        sp.setAnhBase64(sp.getAnhBase64() == null ? "" : sp.getAnhBase64());
-        if (!sp.getSku().matches("[A-Z0-9][A-Z0-9._-]{1,19}"))
-            throw new IllegalArgumentException("SKU gồm 2–20 chữ cái không dấu, chữ số, dấu chấm, gạch ngang hoặc gạch dưới.");
-        if (sp.getTen().length() < 3 || sp.getTen().length() > 150)
-            throw new IllegalArgumentException("Tên sản phẩm phải có từ 3 đến 150 ký tự.");
-        if (sp.getThuongHieu().isEmpty() || sp.getThuongHieu().length() > 80)
-            throw new IllegalArgumentException("Thương hiệu phải có từ 1 đến 80 ký tự.");
-        BigDecimal gia = sp.getGiaBan();
-        if (gia == null || gia.signum() <= 0 || gia.compareTo(new BigDecimal("999999999999")) > 0
-                || gia.stripTrailingZeros().scale() > 0)
-            throw new IllegalArgumentException("Giá bán phải là số nguyên VND từ 1 đến 999.999.999.999.");
-        sp.setGiaBan(gia.setScale(0));
-        if (sp.getBaoHanhThang() < 0 || sp.getBaoHanhThang() > 120)
-            throw new IllegalArgumentException("Bảo hành phải từ 0 đến 120 tháng.");
-        if (sp.getMoTa().length() > 3000) throw new IllegalArgumentException("Mô tả tối đa 3.000 ký tự.");
-        sp.setMaVach(chuoi(sp.getMaVach())); sp.setModel(chuoi(sp.getModel()));
-        sp.setNhomSP(chuoi(sp.getNhomSP())); sp.setMaKM(chuoi(sp.getMaKM()));
-        if (sp.getMaVach().length() > 50 || sp.getModel().length() > 100)
-            throw new IllegalArgumentException("Mã vạch tối đa 50 ký tự, model tối đa 100 ký tự.");
-        if (!sp.getNhomSP().isEmpty() && !sp.getNhomSP().equals("Gọn nhẹ") && !sp.getNhomSP().equals("Cồng kềnh"))
-            throw new IllegalArgumentException("Nhóm sản phẩm phải là Gọn nhẹ hoặc Cồng kềnh.");
-        if (sp.getSlTon() < 0) throw new IllegalArgumentException("Tồn kho không được âm.");
-        try (PreparedStatement p = c.prepareStatement("SELECT 1 FROM dbo.DanhMuc WHERE maDanhMuc=?")) {
-            p.setString(1, sp.getDanhMucId());
-            try (ResultSet r = p.executeQuery()) {
-                if (!r.next()) throw new IllegalArgumentException("Hãy chọn một danh mục hiện có.");
+    public SanPham capNhat(SanPham sanPham) {
+        if (sanPham == null) throw new IllegalArgumentException("Chưa nhập sản phẩm.");
+        SanPham cu = timTheoMa(sanPham.getId());
+        if (cu == null) throw new IllegalArgumentException("Sản phẩm không còn tồn tại.");
+        SanPham moi = new SanPham(sanPham);
+        kiemTra(moi);
+        moi.setTaoLuc(cu.getTaoLuc());
+        moi.setCapNhatLuc(LocalDateTime.now());
+        for (int i = 0; i < duLieu.getSanPham().size(); i++) {
+            if (duLieu.getSanPham().get(i).getId().equals(moi.getId())) {
+                duLieu.getSanPham().set(i, moi);
+                return new SanPham(moi);
             }
         }
-        try (PreparedStatement p = c.prepareStatement("SELECT 1 FROM dbo.SanPham WITH (UPDLOCK,HOLDLOCK) "
-                + "WHERE UPPER(maSKU)=? AND maNoiBo<>?")) {
-            p.setString(1, sp.getSku()); p.setString(2, sp.getId() == null ? "" : sp.getId());
-            try (ResultSet r = p.executeQuery()) {
-                if (r.next()) throw new IllegalArgumentException("SKU đã tồn tại, kể cả sản phẩm ngừng kinh doanh.");
-            }
+        throw new IllegalArgumentException("Sản phẩm không còn tồn tại.");
+    }
+
+    public void xoa(String id) {
+        SanPham sp = timTheoMa(id);
+        if (sp == null) throw new IllegalArgumentException("Sản phẩm không còn tồn tại.");
+        if (sp.isDangKinhDoanh()) throw new IllegalArgumentException("Hãy ngừng kinh doanh và lưu sản phẩm trước khi xóa.");
+        for (int i = 0; i < duLieu.getSanPham().size(); i++) {
+            if (duLieu.getSanPham().get(i).getId().equals(id)) { duLieu.getSanPham().remove(i); return; }
+        }
+    }
+
+    private String donGianHoa(String value) { return value == null ? "" : value.trim().replaceAll("\\s+", " "); }
+
+    private void kiemTra(SanPham sp) {
+        sp.setSku(donGianHoa(sp.getSku()).toUpperCase(Locale.ROOT));
+        sp.setTen(donGianHoa(sp.getTen()));
+        sp.setThuongHieu(donGianHoa(sp.getThuongHieu()));
+        sp.setMoTa(sp.getMoTa() == null ? "" : sp.getMoTa().trim());
+        sp.setAnhBase64(sp.getAnhBase64() == null ? "" : sp.getAnhBase64());
+        if (!sp.getSku().matches("[A-Z0-9][A-Z0-9._-]{1,39}")) throw new IllegalArgumentException("SKU gồm 2–40 chữ cái không dấu, chữ số, dấu chấm, gạch ngang hoặc gạch dưới.");
+        if (sp.getTen().length() < 3 || sp.getTen().length() > 150) throw new IllegalArgumentException("Tên sản phẩm phải có từ 3 đến 150 ký tự.");
+        if (sp.getThuongHieu().isEmpty() || sp.getThuongHieu().length() > 80) throw new IllegalArgumentException("Thương hiệu phải có từ 1 đến 80 ký tự.");
+        if (danhMucDAO.timTheoMa(sp.getDanhMucId()) == null) throw new IllegalArgumentException("Hãy chọn một danh mục hiện có.");
+        BigDecimal gia = sp.getGiaBan();
+        if (gia == null || gia.signum() <= 0 || gia.compareTo(new BigDecimal("999999999999")) > 0 || gia.stripTrailingZeros().scale() > 0) {
+            throw new IllegalArgumentException("Giá bán phải là số nguyên VND từ 1 đến 999.999.999.999.");
+        }
+        sp.setGiaBan(gia.setScale(0));
+        if (sp.getBaoHanhThang() < 0 || sp.getBaoHanhThang() > 120) throw new IllegalArgumentException("Bảo hành phải từ 0 đến 120 tháng.");
+        if (sp.getMoTa().length() > 3000) throw new IllegalArgumentException("Mô tả không được vượt quá 3.000 ký tự.");
+        for (SanPham cu : duLieu.getSanPham()) {
+            if (!cu.getId().equals(sp.getId()) && cu.getSku().equalsIgnoreCase(sp.getSku())) throw new IllegalArgumentException("SKU đã tồn tại, kể cả ở sản phẩm ngừng kinh doanh.");
+            if (chuanHoaTimKiem(cu.getThuongHieu()).equals(chuanHoaTimKiem(sp.getThuongHieu()))) sp.setThuongHieu(cu.getThuongHieu());
         }
         kiemTraAnh(sp.getAnhBase64());
     }
 
-    private void ganDuLieu(PreparedStatement p, SanPham sp) throws SQLException {
-        p.setString(1, sp.getSku()); p.setNString(2, sp.getTen()); p.setString(3, sp.getDanhMucId());
-        p.setNString(4, sp.getThuongHieu()); p.setBigDecimal(5, sp.getGiaBan());
-        p.setInt(6, sp.getBaoHanhThang()); p.setBoolean(7, sp.isDangKinhDoanh());
-        p.setNString(8, sp.getMoTa()); p.setString(9, sp.getAnhBase64());
-    }
-
-    private void ganThongTinBoSung(PreparedStatement p, SanPham sp) throws SQLException {
-        p.setString(11, sp.getMaVach().isEmpty() ? null : sp.getMaVach());
-        p.setNString(12, sp.getModel());
-        p.setNString(13, sp.getNhomSP().isEmpty() ? null : sp.getNhomSP());
-        p.setString(14, sp.getMaKM().isEmpty() ? null : sp.getMaKM());
-    }
-
-    public SanPham them(SanPham input) {
-        if (input == null) throw new IllegalArgumentException("Chưa nhập sản phẩm.");
-        try (Connection c = ConnectDB.openConnection()) {
-            c.setAutoCommit(false);
-            try {
-                SanPham sp = new SanPham(input); sp.setId(null); kiemTra(c, sp);
-                sp.setId(JdbcHelper.taoMa(c, "SELECT COALESCE(MAX(TRY_CONVERT(BIGINT,SUBSTRING(maNoiBo,3,8))),0) "
-                        + "FROM dbo.SanPham WITH (UPDLOCK,HOLDLOCK) WHERE maNoiBo LIKE 'SP%'", "SP", 6));
-                String sql = "INSERT INTO dbo.SanPham(maSKU,tenSP,maDanhMuc,thuongHieu,donGia,thoiGianBaoHanh,"
-                        + "trangThai,moTa,anhBase64,maNoiBo,maVach,model,nhomSanPham,maKM,slTon) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
-                try (PreparedStatement p = c.prepareStatement(sql)) {
-                    ganDuLieu(p, sp); p.setString(10, sp.getId()); ganThongTinBoSung(p, sp);
-                    p.setInt(15, sp.getSlTon()); p.executeUpdate();
-                }
-                SanPham daLuu = timTheoMa(c, sp.getId());
-                c.commit(); return daLuu;
-            } catch (SQLException | RuntimeException e) { JdbcHelper.rollback(c, e); throw e; }
-        } catch (SQLException e) { throw JdbcHelper.loi(e); }
-    }
-
-    public SanPham capNhat(SanPham input) {
-        if (input == null) throw new IllegalArgumentException("Chưa nhập sản phẩm.");
-        try (Connection c = ConnectDB.openConnection()) {
-            c.setAutoCommit(false);
-            try {
-                SanPham sp = new SanPham(input);
-                SanPham cu = timTheoMa(c, sp.getId());
-                if (cu == null) throw new IllegalArgumentException("Sản phẩm không còn tồn tại.");
-                kiemTra(c, sp);
-                // SKU là khóa ngoại của hóa đơn. Giữ mã sau khi đã phát sinh nghiệp vụ.
-                if (!cu.getSku().equals(sp.getSku()) && daDuocSuDung(c, cu.getSku()))
-                    throw new IllegalArgumentException("Sản phẩm đã có hóa đơn/bảo hành nên không được đổi SKU.");
-                String sql = "UPDATE dbo.SanPham SET maSKU=?,tenSP=?,maDanhMuc=?,thuongHieu=?,donGia=?,"
-                        + "thoiGianBaoHanh=?,trangThai=?,moTa=?,anhBase64=?,capNhatLuc=SYSDATETIME(),"
-                        + "maVach=?,model=?,nhomSanPham=?,maKM=? WHERE maNoiBo=?";
-                try (PreparedStatement p = c.prepareStatement(sql)) {
-                    ganDuLieu(p, sp);
-                    // Vị trí 10–13 là thông tin bổ sung; vị trí 14 là mã nội bộ trong WHERE.
-                    p.setString(10, sp.getMaVach().isEmpty() ? null : sp.getMaVach());
-                    p.setNString(11, sp.getModel());
-                    p.setNString(12, sp.getNhomSP().isEmpty() ? null : sp.getNhomSP());
-                    p.setString(13, sp.getMaKM().isEmpty() ? null : sp.getMaKM()); p.setString(14, sp.getId());
-                    if (p.executeUpdate() != 1) throw new IllegalArgumentException("Sản phẩm không còn tồn tại.");
-                }
-                SanPham daLuu = timTheoMa(c, sp.getId());
-                c.commit(); return daLuu;
-            } catch (SQLException | RuntimeException e) { JdbcHelper.rollback(c, e); throw e; }
-        } catch (SQLException e) { throw JdbcHelper.loi(e); }
-    }
-
-    private boolean daDuocSuDung(Connection c, String sku) throws SQLException {
-        String sql = "SELECT 1 FROM dbo.ChiTietHoaDon WHERE maSKU=? UNION ALL "
-                + "SELECT 1 FROM dbo.PhieuBaoHanh WHERE maSKU=?";
-        try (PreparedStatement p = c.prepareStatement(sql)) {
-            p.setString(1, sku); p.setString(2, sku);
-            try (ResultSet r = p.executeQuery()) { return r.next(); }
-        }
-    }
-
-    public void xoa(String id) {
-        String sql = "DELETE FROM dbo.SanPham WHERE maNoiBo=? AND trangThai=0 "
-                + "AND NOT EXISTS(SELECT 1 FROM dbo.ChiTietHoaDon d WHERE d.maSKU=SanPham.maSKU) "
-                + "AND NOT EXISTS(SELECT 1 FROM dbo.PhieuBaoHanh b WHERE b.maSKU=SanPham.maSKU)";
-        try (Connection c = ConnectDB.openConnection(); PreparedStatement p = c.prepareStatement(sql)) {
-            p.setString(1, id);
-            if (p.executeUpdate() != 1)
-                throw new IllegalArgumentException("Chỉ xóa sản phẩm đã ngừng kinh doanh, chưa có hóa đơn/bảo hành.");
-        } catch (SQLException e) { throw JdbcHelper.loi(e); }
-    }
-
     public ArrayList<String> layThuongHieu() {
-        ArrayList<String> ds = new ArrayList<>();
-        try (Connection c = ConnectDB.openConnection();
-                PreparedStatement p = c.prepareStatement("SELECT DISTINCT thuongHieu FROM dbo.SanPham ORDER BY thuongHieu");
-                ResultSet r = p.executeQuery()) {
-            while (r.next()) ds.add(r.getString(1));
-            return ds;
-        } catch (SQLException e) { throw JdbcHelper.loi(e); }
+        ArrayList<String> ketQua = new ArrayList<>();
+        for (SanPham sp : duLieu.getSanPham()) {
+            if (!ketQua.contains(sp.getThuongHieu())) ketQua.add(sp.getThuongHieu());
+        }
+        Collections.sort(ketQua, String.CASE_INSENSITIVE_ORDER);
+        return ketQua;
     }
+
     public ArrayList<Integer> layBaoHanh() {
-        ArrayList<Integer> ds = new ArrayList<>();
-        try (Connection c = ConnectDB.openConnection();
-                PreparedStatement p = c.prepareStatement("SELECT DISTINCT COALESCE(thoiGianBaoHanh,0) FROM dbo.SanPham ORDER BY 1");
-                ResultSet r = p.executeQuery()) {
-            while (r.next()) ds.add(r.getInt(1));
-            return ds;
-        } catch (SQLException e) { throw JdbcHelper.loi(e); }
+        ArrayList<Integer> ketQua = new ArrayList<>();
+        for (SanPham sp : duLieu.getSanPham()) {
+            if (!ketQua.contains(sp.getBaoHanhThang())) ketQua.add(sp.getBaoHanhThang());
+        }
+        Collections.sort(ketQua);
+        return ketQua;
     }
 
     public ArrayList<SanPham> timKiem(String tuKhoa, String danhMucId, String thuongHieu,
             int khoangGia, Integer baoHanh, Boolean dangKinhDoanh) {
-        String sql = SELECT + "WHERE 1=1 ";
-        ArrayList<Object> values = new ArrayList<>();
-        if (danhMucId != null) { sql += "AND s.maDanhMuc=? "; values.add(danhMucId); }
-        if (thuongHieu != null) { sql += "AND s.thuongHieu COLLATE Latin1_General_100_CI_AI=? "; values.add(thuongHieu); }
-        if (baoHanh != null) { sql += "AND COALESCE(s.thoiGianBaoHanh,0)=? "; values.add(baoHanh); }
-        if (dangKinhDoanh != null) { sql += "AND s.trangThai=? "; values.add(dangKinhDoanh); }
-        if (khoangGia == 1) sql += "AND s.donGia<5000000 ";
-        if (khoangGia == 2) sql += "AND s.donGia BETWEEN 5000000 AND 15000000 ";
-        if (khoangGia == 3) sql += "AND s.donGia>15000000 ";
-        String q = chuanHoaTimKiem(tuKhoa);
-        if (!q.isEmpty()) for (String token : q.split(" ")) {
-            sql += "AND REPLACE(REPLACE(CONCAT(s.maSKU,N' ',s.maVach,N' ',s.tenSP,N' ',s.thuongHieu,N' ',d.tenDanhMuc),"
-                    + "N'đ',N'd'),N'Đ',N'D') COLLATE Latin1_General_100_CI_AI LIKE ? ESCAPE '!' ";
-            values.add("%" + thoatLike(token) + "%");
+        ArrayList<SanPham> ketQua = new ArrayList<>();
+        String query = chuanHoaTimKiem(tuKhoa);
+        for (SanPham sp : duLieu.getSanPham()) {
+            if (danhMucId != null && !danhMucId.equals(sp.getDanhMucId())) continue;
+            if (thuongHieu != null && !chuanHoaTimKiem(thuongHieu).equals(chuanHoaTimKiem(sp.getThuongHieu()))) continue;
+            if (baoHanh != null && baoHanh != sp.getBaoHanhThang()) continue;
+            if (dangKinhDoanh != null && dangKinhDoanh != sp.isDangKinhDoanh()) continue;
+            int soVoi5 = sp.getGiaBan().compareTo(new BigDecimal("5000000"));
+            int soVoi15 = sp.getGiaBan().compareTo(new BigDecimal("15000000"));
+            // 0: tất cả, 1: dưới 5 triệu, 2: từ 5 đến 15 triệu, 3: trên 15 triệu.
+            if (khoangGia == 1 && soVoi5 >= 0) continue;
+            if (khoangGia == 2 && (soVoi5 < 0 || soVoi15 > 0)) continue;
+            if (khoangGia == 3 && soVoi15 <= 0) continue;
+            String noiDung = chuanHoaTimKiem(sp.getTen() + " " + sp.getSku() + " " + sp.getThuongHieu() + " " + danhMucDAO.layTen(sp.getDanhMucId()));
+            boolean phuHop = true;
+            if (!query.isEmpty()) {
+                for (String tu : query.split(" ")) {
+                    if (!noiDung.contains(tu)) { phuHop = false; break; }
+                }
+            }
+            if (phuHop) ketQua.add(new SanPham(sp));
         }
-        ArrayList<SanPham> ds = new ArrayList<>();
-        try (Connection c = ConnectDB.openConnection(); PreparedStatement p = c.prepareStatement(sql + "ORDER BY s.tenSP")) {
-            for (int i = 0; i < values.size(); i++) p.setObject(i + 1, values.get(i));
-            try (ResultSet r = p.executeQuery()) { while (r.next()) ds.add(docDong(r)); }
-            return ds;
-        } catch (SQLException e) { throw JdbcHelper.loi(e); }
-    }
-
-    static String thoatLike(String value) {
-        return value.replace("!", "!!").replace("%", "!%").replace("_", "!_").replace("[", "![");
+        return ketQua;
     }
 
     public void sapXep(ArrayList<SanPham> danhSach, final int kieu) {

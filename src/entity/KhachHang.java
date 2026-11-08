@@ -3,8 +3,104 @@ package entity;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-/** Dữ liệu khách hàng; DAO ánh xạ giữa đối tượng này và một dòng SQL. */
+/** Dữ liệu trong phiên chạy; DAO trả về bản sao để tránh thay đổi ngoài ý muốn. */
 public class KhachHang {
+<<<<<<< HEAD
+    private String maKH;
+    private String hoTen;
+    private String sdt;
+    private String email;
+    private String diaChi;
+    private LocalDate ngaySinh;
+    private boolean gioiTinh;
+    private String hangTV;
+    private double tongChiTieuTichLuy;
+    private boolean trangThai;
+
+    public KhachHang() { }
+    
+	public KhachHang(String maKH, String hoTen, String sdt, String email, String diaChi, LocalDate ngaySinh,
+			boolean gioiTinh, String hangTV, double tongChiTieuTichLuy, boolean trangThai) {
+		super();
+		this.maKH = maKH;
+		this.hoTen = hoTen;
+		this.sdt = sdt;
+		this.email = email;
+		this.diaChi = diaChi;
+		this.ngaySinh = ngaySinh;
+		this.gioiTinh = gioiTinh;
+		this.hangTV = hangTV;
+		this.tongChiTieuTichLuy = tongChiTieuTichLuy;
+		this.trangThai = trangThai;
+	}
+
+	public KhachHang(KhachHang other) {
+        this(other.maKH, other.hoTen, other.sdt, other.email, other.diaChi, other.ngaySinh, other.gioiTinh, other.hangTV, other.tongChiTieuTichLuy, other.trangThai);
+    }
+	public String getMaKH() {
+		return maKH;
+	}
+	public void setMaKH(String maKH) {
+		this.maKH = maKH;
+	}
+	public String getHoTen() {
+		return hoTen;
+	}
+	public void setHoTen(String hoTen) {
+		this.hoTen = hoTen;
+	}
+	public String getSdt() {
+		return sdt;
+	}
+	public void setSdt(String sdt) {
+		this.sdt = sdt;
+	}
+	public String getEmail() {
+		return email;
+	}
+	public void setEmail(String email) {
+		this.email = email;
+	}
+	public String getDiaChi() {
+		return diaChi;
+	}
+	public void setDiaChi(String diaChi) {
+		this.diaChi = diaChi;
+	}
+	public LocalDate getNgaySinh() {
+		return ngaySinh;
+	}
+	public void setNgaySinh(LocalDate ngaySinh) {
+		this.ngaySinh = ngaySinh;
+	}
+	public boolean isGioiTinh() {
+		return gioiTinh;
+	}
+	public void setGioiTinh(boolean gioiTinh) {
+		this.gioiTinh = gioiTinh;
+	}
+	public String getHangTV() {
+		return hangTV;
+	}
+	public void setHangTV(String hangTV) {
+		this.hangTV = hangTV;
+	}
+	public double getTongChiTieuTichLuy() {
+		return tongChiTieuTichLuy;
+	}
+	public void setTongChiTieuTichLuy(double tongChiTieuTichLuy) {
+		this.tongChiTieuTichLuy = tongChiTieuTichLuy;
+	}
+
+	public boolean isTrangThai() {
+		return trangThai;
+	}
+
+	public void setTrangThai(boolean trangThai) {
+		this.trangThai = trangThai;
+	}
+	
+=======
     private String id;
     private String hoTen;
     private String soDienThoai;
@@ -35,7 +131,6 @@ public class KhachHang {
 
     public KhachHang(KhachHang other) {
         this(other.id, other.hoTen, other.soDienThoai, other.email, other.diaChi, other.ngaySinh, other.dangHoatDong, other.nhanKhuyenMai, other.ghiChu, other.taoLuc, other.capNhatLuc);
-        gioiTinh = other.gioiTinh; hangTV = other.hangTV; tongChiTieu = other.tongChiTieu;
     }
 
     public String getId() { return id; }
@@ -70,28 +165,5 @@ public class KhachHang {
 
     public LocalDateTime getCapNhatLuc() { return capNhatLuc; }
     public void setCapNhatLuc(LocalDateTime capNhatLuc) { this.capNhatLuc = capNhatLuc; }
-    private Boolean gioiTinh;
-    private String hangTV;
-    private java.math.BigDecimal tongChiTieu = java.math.BigDecimal.ZERO;
-    public String getMaKH() { return id; }
-    public void setMaKH(String value) { id = value; }
-    public String getSdt() { return soDienThoai; }
-    public void setSdt(String value) { soDienThoai = value; }
-    public Boolean getGioiTinh() { return gioiTinh; }
-    public boolean isGioiTinh() { return Boolean.TRUE.equals(gioiTinh); }
-    public void setGioiTinh(Boolean value) { gioiTinh = value; }
-    public String getHangTV() { return hangTV; }
-    public void setHangTV(String value) { hangTV = value; }
-    public java.math.BigDecimal getTongChiTieu() { return tongChiTieu; }
-    public void setTongChiTieu(java.math.BigDecimal value) { tongChiTieu = value; }
-    public double getTongChiTieuTichLuy() { return tongChiTieu.doubleValue(); }
-    public void setTongChiTieuTichLuy(double value) { tongChiTieu = java.math.BigDecimal.valueOf(value); }
-    public boolean isTrangThai() { return dangHoatDong; }
-    public void setTrangThai(boolean value) { dangHoatDong = value; }
-    public KhachHang(String maKH, String hoTen, String sdt, String email, String diaChi,
-            LocalDate ngaySinh, boolean gioiTinh, String hangTV, double tongChiTieuTichLuy, boolean trangThai) {
-        this.id = maKH; this.hoTen = hoTen; this.soDienThoai = sdt; this.email = email; this.diaChi = diaChi;
-        this.ngaySinh = ngaySinh; this.gioiTinh = gioiTinh; this.hangTV = hangTV;
-        setTongChiTieuTichLuy(tongChiTieuTichLuy); this.dangHoatDong = trangThai;
-    }
+>>>>>>> 957a42b1ddd343adedd740681bfd7a592402b483
 }

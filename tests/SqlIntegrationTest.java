@@ -26,7 +26,7 @@ public class SqlIntegrationTest {
             try {
                 LocalDateTime now;try(Statement p=real.createStatement();ResultSet r=p.executeQuery("SELECT GETDATE()")){r.next();now=r.getTimestamp(1).toLocalDateTime();}
                 execute(real,"INSERT INTO dbo.DanhMuc(maDanhMuc,tenDanhMuc) VALUES (?,?)",category,"Danh mục kiểm thử");
-                execute(real,"INSERT INTO dbo.SanPham(maSKU,maVach,tenSP,donGia,slTon,maDanhMuc,thuongHieu) VALUES (?,?,?,?,?,?,?)",product,"V"+suffix,"Sản phẩm kiểm thử",100000,10,category,"Test");
+                execute(real,"INSERT INTO dbo.SanPham(maSKU,maVach,tenSP,donGia,slTon,maDanhMuc) VALUES (?,?,?,?,?,?)",product,"V"+suffix,"Sản phẩm kiểm thử",100000,10,category);
                 execute(real,"INSERT INTO dbo.NhanVien(maNV,hoTen,chucVu) VALUES (?,?,?)",employee,"NV kiểm thử","Bán hàng");
                 execute(real,"INSERT INTO dbo.CaLamViec(maCa,thoiGianMoCa,trangThai) VALUES (?,?,?)",shift,Timestamp.valueOf(now),"Đang mở");
                 execute(real,"INSERT INTO dbo.LichLamViec(maLich,ngayLamViec,maNV,maCa) VALUES (?,CAST(GETDATE() AS DATE),?,?)","L"+suffix,employee,shift);

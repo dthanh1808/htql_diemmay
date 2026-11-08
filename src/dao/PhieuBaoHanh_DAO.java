@@ -41,9 +41,9 @@ public class PhieuBaoHanh_DAO {
             
             pst.setString(1, phieu.getMaPhieu());
             pst.setString(2, phieu.getSoSerial());
-            pst.setString(3, phieu.getSanPham() != null ? phieu.getSanPham().getSku() : null); // Lấy mã SP
-            pst.setString(4, phieu.getKhachHang() != null ? phieu.getKhachHang().getId() : null);  // Lấy mã KH
-            pst.setString(5, phieu.getNhanVien() != null ? phieu.getNhanVien().getMaNV() : null);  // Lấy mã NV
+            pst.setString(3, phieu.getSp() != null ? phieu.getSp().getSku() : null); // Lấy mã SP
+            pst.setString(4, phieu.getKh() != null ? phieu.getKh().getId() : null);  // Lấy mã KH
+            pst.setString(5, phieu.getNv() != null ? phieu.getNv().getMaNV() : null);  // Lấy mã NV
             
             // Xử lý ngày tháng (Chuyển từ java.util.Date sang java.sql.Date)
             pst.setDate(6, phieu.getNgayTiepNhan() != null ? new java.sql.Date(phieu.getNgayTiepNhan().getTime()) : null);
@@ -74,9 +74,9 @@ public class PhieuBaoHanh_DAO {
              PreparedStatement pst = conn.prepareStatement(sql)) {
             
             pst.setString(1, phieu.getSoSerial());
-            pst.setString(2, phieu.getSanPham() != null ? phieu.getSanPham().getSku() : null);
-            pst.setString(3, phieu.getKhachHang() != null ? phieu.getKhachHang().getId() : null);
-            pst.setString(4, phieu.getNhanVien() != null ? phieu.getNhanVien().getMaNV() : null);
+            pst.setString(2, phieu.getSp() != null ? phieu.getSp().getSku() : null);
+            pst.setString(3, phieu.getKh() != null ? phieu.getKh().getId() : null);
+            pst.setString(4, phieu.getNv() != null ? phieu.getNv().getMaNV() : null);
             
             pst.setDate(5, phieu.getNgayTiepNhan() != null ? new java.sql.Date(phieu.getNgayTiepNhan().getTime()) : null);
             pst.setDate(6, phieu.getNgayHenTra() != null ? new java.sql.Date(phieu.getNgayHenTra().getTime()) : null);

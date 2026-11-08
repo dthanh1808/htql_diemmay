@@ -20,6 +20,7 @@ import java.util.Locale;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.io.IOException;
+import dao.DuLieuTam;
 import dao.KhachHangDAO;
 import entity.*;
 
@@ -533,8 +534,9 @@ public class PNL_KhachHang extends JPanel {
     private LocalDate from, to;
     private int page = 1;
 
-    public PNL_KhachHang() {
-        dao = new KhachHangDAO();
+    public PNL_KhachHang() { this(DuLieuTam.getMacDinh()); }
+    public PNL_KhachHang(DuLieuTam data) {
+        dao = new KhachHangDAO(data);
         setLayout(new BorderLayout(0, 8));
         setBackground(bgMain);
         setBorder(new EmptyBorder(14, 18, 14, 18));
@@ -542,7 +544,7 @@ public class PNL_KhachHang extends JPanel {
         notice.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         notice.setName("customer.notice"); notice.setVisible(false);
         add(notice, BorderLayout.NORTH); add(content, BorderLayout.CENTER);
-        initialiseList(); showView("list"); perform(this::refreshList);
+        initialiseList(); showView("list");
     }
 
     private void message(String text, boolean success) {
@@ -648,14 +650,14 @@ public class PNL_KhachHang extends JPanel {
         table.getColumnModel().getColumn(6).setCellRenderer(new ActionRenderer("Xem", "Sửa", "Lịch sử"));
         table.getColumnModel().getColumn(6).setCellEditor(new CustomerActionEditor());
         table.addMouseListener(new MouseAdapter() { public void mouseClicked(MouseEvent e) {
-            int row = table.rowAtPoint(e.getPoint()); if (e.getClickCount() == 2 && row >= 0 && table.columnAtPoint(e.getPoint()) != 6) perform(() -> details(rowId(row), false));
+            int row = table.rowAtPoint(e.getPoint()); if (e.getClickCount() == 2 && row >= 0 && table.columnAtPoint(e.getPoint()) != 6) details(rowId(row), false);
         }});
         table.getInputMap().put(KeyStroke.getKeyStroke("ENTER"), "viewCustomer");
-        table.getActionMap().put("viewCustomer", new AbstractAction() { public void actionPerformed(ActionEvent e) { if (table.getSelectedRow() >= 0) perform(() -> details(rowId(table.getSelectedRow()), false)); }});
+        table.getActionMap().put("viewCustomer", new AbstractAction() { public void actionPerformed(ActionEvent e) { if (table.getSelectedRow() >= 0) details(rowId(table.getSelectedRow()), false); }});
         table.getInputMap().put(KeyStroke.getKeyStroke("F2"), "editCustomer");
-        table.getActionMap().put("editCustomer", new AbstractAction() { public void actionPerformed(ActionEvent e) { if (table.getSelectedRow() >= 0) perform(() -> editor(rowId(table.getSelectedRow()))); }});
+        table.getActionMap().put("editCustomer", new AbstractAction() { public void actionPerformed(ActionEvent e) { if (table.getSelectedRow() >= 0) editor(rowId(table.getSelectedRow())); }});
         sort = createCombo("Tên A–Z", "Tên Z–A", "Chi tiêu tăng dần", "Chi tiêu giảm dần", "Mới đăng ký"); sort.setName("customer.sort");
-        sort.addActionListener(e -> perform(() -> { page = 1; refreshList(); }));
+        sort.addActionListener(e -> { page = 1; refreshList(); });
         JPanel heading = createHeader("Danh sách khách hàng", "", group(
                 button("Đăng ký khách hàng", 1, () -> editor(null)), button("Xuất CSV", 0, this::exportCsv),
                 button("Chính sách hạng thành viên", 0, this::policy), button("Gửi khuyến mãi", 0, this::promotion)), group(label("Sắp xếp:"), sort));
@@ -665,10 +667,10 @@ public class PNL_KhachHang extends JPanel {
         empty = label("Không tìm thấy khách hàng phù hợp. Hãy đổi từ khóa hoặc xóa bộ lọc."); empty.setHorizontalAlignment(SwingConstants.CENTER); empty.setName("customer.empty");
         rows.add(empty, BorderLayout.NORTH); rows.add(createScrollPane(table), BorderLayout.CENTER); list.add(rows, BorderLayout.CENTER);
         pageInfo = label(""); pageSize = createCombo("10", "25", "50"); pageSize.setName("customer.pageSize");
-        pageSize.addActionListener(e -> perform(() -> { page = 1; refreshList(); }));
+        pageSize.addActionListener(e -> { page = 1; refreshList(); });
         previous = button("Trang trước", 0, () -> { page--; refreshList(); }); next = button("Trang sau", 0, () -> { page++; refreshList(); });
         list.add(actions(pageInfo, label("Số dòng:"), pageSize, previous, next), BorderLayout.SOUTH);
-        listView.add(list, BorderLayout.CENTER); install("list", listView);
+        listView.add(list, BorderLayout.CENTER); install("list", listView); refreshList();
     }
     private String rowId(int row) { return ((String[]) model.getValueAt(table.convertRowIndexToModel(row), 0))[1]; }
     private class CustomerActionEditor extends AbstractCellEditor implements TableCellEditor {
@@ -703,9 +705,9 @@ public class PNL_KhachHang extends JPanel {
         for (int i = start; i < end; i++) {
             KhachHang kh = filtered.get(i);
             model.addRow(new Object[]{new String[]{kh.getHoTen(), kh.getId()}, new String[]{kh.getSoDienThoai(), kh.getEmail().isEmpty() ? "Chưa có email" : kh.getEmail()},
-                    kh.getHangTV(), money(kh.getTongChiTieu()), dateFormat.format(kh.getTaoLuc()), kh.isDangHoatDong() ? "Đang hoạt động" : "Ngừng hoạt động", ""});
+                    dao.layHang(kh.getId()).getTen(), money(dao.tongChiTieu(kh.getId())), dateFormat.format(kh.getTaoLuc()), kh.isDangHoatDong() ? "Đang hoạt động" : "Ngừng hoạt động", ""});
         }
-        summary.setText(filtered.size() + " kết quả / " + dao.demTatCa() + " khách hàng");
+        summary.setText(filtered.size() + " kết quả / " + dao.layTatCa().size() + " khách hàng");
         pageInfo.setText("Hiển thị " + (filtered.isEmpty() ? 0 : start + 1) + "–" + end + "/" + filtered.size() + " · Trang " + page + "/" + pages);
         previous.setEnabled(page > 1); next.setEnabled(page < pages); empty.setVisible(filtered.isEmpty());
     }
@@ -781,9 +783,9 @@ public class PNL_KhachHang extends JPanel {
         tabs.addTab("Hồ sơ", scroll(info));
         ArrayList<GiaoDichKhachHang> transactions = dao.layGiaoDich(id); Object[][] rows = new Object[transactions.size()][4];
         for (int i = 0; i < rows.length; i++) { GiaoDichKhachHang gd = transactions.get(i); rows[i] = new Object[]{gd.getMaHoaDon(), timeFormat.format(gd.getThoiGian()), money(gd.getSoTien()), gd.getNoiDung()}; }
-        JTable purchases = createTable(rows, new String[]{"Mã hóa đơn", "Thời gian", "Giá trị hóa đơn", "Nội dung"}, new int[]{150, 165, 150, 400}, 2); purchases.setName("customer.transactions");
+        JTable purchases = createTable(rows, new String[]{"Mã hóa đơn", "Thời gian", "Thực thanh toán", "Nội dung"}, new int[]{150, 165, 150, 400}, 2); purchases.setName("customer.transactions");
         JPanel spending = new JPanel(new BorderLayout(0, 8)); spending.setBackground(Color.WHITE);
-        spending.add(label(transactions.size() + " giao dịch · Tổng chi tiêu tích lũy: " + money(total)), BorderLayout.NORTH); spending.add(createScrollPane(purchases));
+        spending.add(label(transactions.size() + " giao dịch · Tổng thực thanh toán: " + money(total)), BorderLayout.NORTH); spending.add(createScrollPane(purchases));
         tabs.addTab("Lịch sử mua hàng", spending);
         ArrayList<LichSuKhachHang> events = dao.layLichSu(id); rows = new Object[events.size()][3];
         for (int i = 0; i < rows.length; i++) { LichSuKhachHang ls = events.get(i); rows[i] = new Object[]{timeFormat.format(ls.getThoiGian()), ls.getLoai(), ls.getNoiDung()}; }
@@ -868,8 +870,8 @@ public class PNL_KhachHang extends JPanel {
     public String taoCsv() {
         StringBuilder csv = new StringBuilder("Mã KH,Họ tên,Số điện thoại,Email,Địa chỉ,Hạng,Tổng chi tiêu,Ngày đăng ký,Trạng thái,Nhận khuyến mãi\r\n");
         for (KhachHang kh : filtered) {
-            String[] values = {kh.getId(), kh.getHoTen(), kh.getSoDienThoai(), kh.getEmail(), kh.getDiaChi(), kh.getHangTV(),
-                    kh.getTongChiTieu().toPlainString(), dateFormat.format(kh.getTaoLuc()), kh.isDangHoatDong() ? "Đang hoạt động" : "Ngừng hoạt động", kh.isNhanKhuyenMai() ? "Có" : "Không"};
+            String[] values = {kh.getId(), kh.getHoTen(), kh.getSoDienThoai(), kh.getEmail(), kh.getDiaChi(), dao.layHang(kh.getId()).getTen(),
+                    dao.tongChiTieu(kh.getId()).toPlainString(), dateFormat.format(kh.getTaoLuc()), kh.isDangHoatDong() ? "Đang hoạt động" : "Ngừng hoạt động", kh.isNhanKhuyenMai() ? "Có" : "Không"};
             for (int i = 0; i < values.length; i++) { if (i > 0) csv.append(','); String v = values[i];
                 if (v.stripLeading().matches("(?s)^[=+@-].*") || v.startsWith("\t") || v.startsWith("\r")) v = "'" + v;
                 csv.append('"').append(v.replace("\"", "\"\"")).append('"'); }
@@ -891,13 +893,13 @@ public class PNL_KhachHang extends JPanel {
         if (Files.exists(path)) confirm("Ghi đè file?", "File " + path.getFileName() + " đã tồn tại. Ghi đè nội dung hiện có?", "Ghi đè file", 2, save, () -> showView("list"));
         else save.run();
     }
-
+    
  // ================== CÁC HÀM PUBLIC ĐỂ TRANG CHỦ GỌI ==================
     public void moFormDangKy() {
-        editor(null);
+        editor(null); 
     }
 
     public void moDanhSach() {
-        perform(this::backToList);
+        backToList(); 
     }
 }

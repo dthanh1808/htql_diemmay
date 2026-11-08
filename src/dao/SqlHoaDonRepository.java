@@ -57,7 +57,7 @@ public final class SqlHoaDonRepository {
         Header(ResultSet r)throws SQLException {
             id=r.getString("maHD");date=r.getTimestamp("ngayLap").toLocalDateTime();nv=r.getString("maNV");ca=empty(r.getString("maCa"));
             customer=r.getString("customerName");phone=r.getString("customerPhone");tier=r.getString("customerTier");method=empty(r.getString("phuongThucThanhToan"));status=empty(r.getString("trangThai"));
-            delivery=empty(r.getString("ghiChuGiaoHang"));promotion=r.getString("promotionName");partner=empty(r.getString("doiTacTaiChinh"));term=r.getInt("kyHan");
+            delivery=empty(r.getString("ghiChuGiaoLapDat"));promotion=r.getString("promotionName");partner=empty(r.getString("doiTacTaiChinh"));term=r.getInt("kyHan");
             discount=r.getBigDecimal("tienGiamGia");total=r.getBigDecimal("tongThanhToan");gross=r.getBigDecimal("tongTienHang");
             BigDecimal tender=r.getBigDecimal("tender");
             // Dữ liệu cũ không có tiền khách đưa: dùng số tiền thanh toán tối thiểu, không suy đoán tiền thừa.
@@ -93,10 +93,10 @@ public final class SqlHoaDonRepository {
                 long sequence=next(c,"SELECT COALESCE(MAX(TRY_CONVERT(INT,RIGHT(maHD,4))),0)+1 FROM dbo.HoaDon WHERE maHD LIKE ?",prefix+"%");
                 if(sequence>9999)throw new SQLException("Đã đạt 9999 hóa đơn/ngày.");
                 HoaDon h=draft.voiMa(prefix+String.format(Locale.ROOT,"%04d",sequence));
-                String insert="INSERT INTO dbo.HoaDon (maHD,ngayLap,tongTienHang,tienGiamGia,tongThanhToan,phuongThucThanhToan,yeuCauGiaoHang,ghiChuGiaoHang,trangThai,maNV,maKH,maKM,maCa,tienKhachDua,hangThanhVienLucMua,tenKhachHangLucMua,sdtKhachHangLucMua,tenKhuyenMaiLucMua) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+                String insert="INSERT INTO dbo.HoaDon (maHD,ngayLap,tongTienHang,tienGiamGia,tongThanhToan,phuongThucThanhToan,yeuCauGiaoLapDat,ghiChuGiaoLapDat,trangThai,maNV,maKH,maKM,maCa,tienKhachDua,hangThanhVienLucMua,tenKhachHangLucMua,sdtKhachHangLucMua,tenKhuyenMaiLucMua) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
                 try(PreparedStatement p=c.prepareStatement(insert)) {
                     p.setString(1,h.ma());p.setTimestamp(2,Timestamp.valueOf(h.ngay()));p.setBigDecimal(3,h.tienHang());p.setBigDecimal(4,h.giamGia());p.setBigDecimal(5,h.tongTien());
-                    p.setNString(6,h.phuongThuc());p.setBoolean(7,!h.giaoHang().isBlank());p.setNString(8,h.giaoHang());p.setNString(9,h.trangThai());p.setString(10,h.nhanVien());
+                    p.setNString(6,h.phuongThuc());p.setNString(7,h.giaoHang().isBlank()?"Không":"Có");p.setNString(8,h.giaoHang());p.setNString(9,h.trangThai());p.setString(10,h.nhanVien());
                     p.setString(11,customer);p.setString(12,promotion);p.setString(13,h.ca());p.setBigDecimal(14,h.khachDua());p.setNString(15,h.hang());p.setNString(16,h.khachHang());p.setString(17,h.sdt());p.setNString(18,h.khuyenMai());p.executeUpdate();
                 }
                 try(PreparedStatement detail=c.prepareStatement("INSERT INTO dbo.ChiTietHoaDon (maHD,maSKU,soLuong,donGia,thanhTien,tenSPLucBan,tenDanhMucLucBan) VALUES (?,?,?,?,?,?,?)");
@@ -107,7 +107,7 @@ public final class SqlHoaDonRepository {
                     }
                 }
                 if(h.phuongThuc().equals("Trả góp"))saveInstallment(c,h);
-                if(customer!=null) KhachHangDAO.ghiNhanMuaHang(c,customer,h.ma(),h.tongTien(),"Thanh toán hóa đơn");
+                if(customer!=null)try(PreparedStatement p=c.prepareStatement("UPDATE dbo.KhachHang SET tongChiTieuTichLuy=tongChiTieuTichLuy+? WHERE maKH=?")){p.setBigDecimal(1,h.tongTien());p.setString(2,customer);p.executeUpdate();}
                 try(PreparedStatement p=c.prepareStatement("UPDATE dbo.CaLamViec SET tongDoanhThu=COALESCE(tongDoanhThu,0)+? WHERE maCa=?")){p.setBigDecimal(1,h.tongTien());p.setString(2,h.ca());p.executeUpdate();}
                 c.commit();return h;
             }catch(SQLException|RuntimeException e){try{c.rollback();}catch(SQLException rollback){e.addSuppressed(rollback);}throw e;}
@@ -122,11 +122,11 @@ public final class SqlHoaDonRepository {
     }
     private static String validateCustomer(Connection c,HoaDon h)throws SQLException {
         if(h.hang().equals("Khách lẻ"))return null;
-        try(PreparedStatement p=c.prepareStatement("SELECT k.maKH,k.tenKH,k.hangTV,h.phanTramUuDai FROM dbo.KhachHang k WITH (UPDLOCK,HOLDLOCK) JOIN dbo.HangThanhVien h ON h.tenHang=k.hangTV WHERE k.sdt=? AND k.trangThai=1")) {
+        try(PreparedStatement p=c.prepareStatement("SELECT maKH,tenKH,hangTV FROM dbo.KhachHang WITH (UPDLOCK,HOLDLOCK) WHERE sdt=? AND trangThai=1")) {
             p.setString(1,h.sdt());try(ResultSet r=p.executeQuery()){
                 if(!r.next())throw new SQLException("Không tìm thấy thành viên đang hoạt động theo SĐT.");
                 if(!h.hang().equals(r.getString("hangTV"))||!h.khachHang().equals(r.getString("tenKH")))throw new SQLException("Thông tin thành viên đã thay đổi. Tìm lại khách hàng trước khi thanh toán.");
-                if(h.giamHoaDon().compareTo(h.tienHang().multiply(BigDecimal.valueOf(r.getInt("phanTramUuDai"))).divide(BigDecimal.valueOf(100),0,RoundingMode.HALF_UP))<0)throw new SQLException("Chưa áp dụng đủ ưu đãi thành viên.");
+                if(h.giamHoaDon().compareTo(HoaDonService.uuDai(h.hang(),h.tienHang()))<0)throw new SQLException("Chưa áp dụng đủ ưu đãi thành viên.");
                 return r.getString("maKH");
             }
         }

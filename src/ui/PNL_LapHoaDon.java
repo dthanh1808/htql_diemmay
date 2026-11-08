@@ -52,7 +52,7 @@ public class PNL_LapHoaDon extends JPanel {
         lineButtons.add(BusinessUI.button("Xóa dòng",()-> { if(table.getSelectedRow()>=0)model.removeRow(table.getSelectedRow()); }));
         lineButtons.add(new JLabel("Nhập giá tại thời điểm bán; giảm dòng là số tiền cố định cho cả dòng.")); center.add(lineButtons,BorderLayout.SOUTH); root.add(center);
         JPanel bottom=new JPanel(new GridLayout(0,1,0,8));
-        bottom.add(new JLabel("Ưu đãi thành viên áp dụng theo chính sách hạng đang lưu trong database."));
+        bottom.add(new JLabel("Hạng thành viên tự giảm 0% / 3% / 5% / 8% trên tiền hàng."));
         total.setFont(new Font("Segoe UI",Font.BOLD,16)); total.setForeground(BusinessUI.BLUE); bottom.add(total); bottom.add(confirmed);
         JPanel buttons=new JPanel(new FlowLayout(FlowLayout.RIGHT)); buttons.add(BusinessUI.button("Tính tiền",this::preview)); buttons.add(BusinessUI.button("Quay lại danh sách",onSaved)); buttons.add(BusinessUI.button("Xóa nội dung",this::clearForm)); buttons.add(BusinessUI.button("Xác nhận thanh toán & Lưu",this::save)); bottom.add(buttons); root.add(bottom,BorderLayout.SOUTH);
         model.addTableModelListener(e->preview()); tier.addActionListener(e->preview()); voucher.addActionListener(e->preview());
@@ -124,13 +124,7 @@ public class PNL_LapHoaDon extends JPanel {
             HoaDon.Dong d=new HoaDon.Dong(sku,name,category,qty,amount(model.getValueAt(i,4)),amount(model.getValueAt(i,5))); lines.add(d); base=base.add(d.tienHang());
         }
         String rank=tier.getSelectedItem().toString();
-        BigDecimal uuDai = BigDecimal.ZERO;
-        if (sqlMode && !rank.equals("Khách lẻ")) {
-            for (entity.HangThanhVien h : new dao.KhachHangDAO().layChinhSach())
-                if (rank.equals(h.getTen())) uuDai = base.multiply(BigDecimal.valueOf(h.getPhanTramUuDai()))
-                        .divide(BigDecimal.valueOf(100), 0, java.math.RoundingMode.HALF_UP);
-        } else if (!sqlMode) uuDai = HoaDonService.uuDai(rank,base);
-        BigDecimal discount=amount(voucher.getText()).add(uuDai);
+        BigDecimal discount=amount(voucher.getText()).add(HoaDonService.uuDai(rank,base));
         return new HoaDon("",BusinessUI.now(),employee,shift,rank.equals("Khách lẻ")&&customer.getText().isBlank()?"Khách lẻ":customer.getText().trim(),phone.getText().trim(),rank,
             method.getSelectedItem().toString(),method.getSelectedIndex()==2?HoaDon.TRA_GOP:HoaDon.DA_TT,discount,amount(paid.getText()),delivery.getText().trim(),promotion.getText().trim(),partner.getText().trim(),method.getSelectedIndex()==2?(Integer)term.getSelectedItem():0,lines);
     }

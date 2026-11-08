@@ -164,12 +164,4 @@ public class NhanVien {
 		NhanVien other = (NhanVien) obj;
 		return Objects.equals(maNV, other.maNV);
 	}
-    // Tương thích UI nhân viên cũ dùng nhãn trạng thái, schema SQL dùng BIT.
-    private String ghiChu = "";
-    public String getGhiChu() { return ghiChu; }
-    public void setGhiChu(String value) { ghiChu = value; }
-    public String getTrangThai() { return trangThai ? "Đang làm việc" : "Đã nghỉ việc"; }
-    public void setTrangThai(String value) {
-        trangThai = "1".equals(value) || "true".equalsIgnoreCase(value) || "Đang làm việc".equals(value);
-    }
 }
