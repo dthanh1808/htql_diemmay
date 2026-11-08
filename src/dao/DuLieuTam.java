@@ -51,7 +51,11 @@ public class DuLieuTam {
             LocalDateTime luc = LocalDateTime.now().minusDays(30 - i);
             String id = taoMaKhachHang();
             khachHang.add(new KhachHang(id, ten[i], sdt[i], "khach" + (i + 1) + "@example.com",
+<<<<<<< HEAD
                     "TP. Hồ Chí Minh", null, i, i != 4, i != 6, "Dữ liệu minh họa", luc, luc));
+=======
+                    "TP. Hồ Chí Minh", null, i != 4, i != 6, "Dữ liệu minh họa", luc, luc));
+>>>>>>> 957a42b1ddd343adedd740681bfd7a592402b483
             lichSuKhachHang.add(new LichSuKhachHang(id, luc, "Đăng ký", "Tạo khách hàng mẫu"));
             giaoDichKhachHang.add(new GiaoDichKhachHang("HD-MAU-" + (i + 1), id,
                     luc.plusDays(1), new BigDecimal(tien[i]), "Mua hàng mẫu"));
