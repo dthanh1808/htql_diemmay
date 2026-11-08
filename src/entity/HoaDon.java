@@ -2,30 +2,109 @@ package entity;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 
-/** Giá và ưu đãi là bản chụp tại thời điểm bán, không phụ thuộc bảng giá hiện tại. */
-public record HoaDon(String ma, LocalDateTime ngay, String nhanVien, String ca,
-        String khachHang, String sdt, String hang, String phuongThuc, String trangThai,
-        BigDecimal giamHoaDon, BigDecimal khachDua, String giaoHang, String khuyenMai,
-        String doiTac, int kyHan, List<Dong> chiTiet) {
-    public static final String DA_TT = "Đã thanh toán", TRA_GOP = "Trả góp";
-    public HoaDon { chiTiet = List.copyOf(chiTiet); }
-    public record Dong(String sku, String ten, String danhMuc, int soLuong,
-            BigDecimal donGia, BigDecimal giamGia) {
-        public BigDecimal tienHang() { return donGia.multiply(BigDecimal.valueOf(soLuong)); }
-        public BigDecimal thanhTien() { return tienHang().subtract(giamGia); }
-    }
-    public BigDecimal tienHang() {
-        return chiTiet.stream().map(Dong::tienHang).reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-    public BigDecimal giamGia() {
-        return chiTiet.stream().map(Dong::giamGia).reduce(giamHoaDon, BigDecimal::add);
-    }
-    public BigDecimal tongTien() { return tienHang().subtract(giamGia()); }
-    public boolean ghiNhanDoanhThu() { return DA_TT.equals(trangThai) || TRA_GOP.equals(trangThai); }
-    public HoaDon voiMa(String id) {
-        return new HoaDon(id, ngay, nhanVien, ca, khachHang, sdt, hang, phuongThuc,
-                trangThai, giamHoaDon, khachDua, giaoHang, khuyenMai, doiTac, kyHan, chiTiet);
-    }
+public class HoaDon {
+	private String maHD;
+	private LocalDateTime ngayLap;
+	private BigDecimal tongTienHang;
+	private BigDecimal tienGiamGia;
+	private BigDecimal tongThanhToan;
+	private String phuongThucThanhToan;
+	private boolean yeuCauGiaoLapDat;
+	private String ghiChuGiaoLapDat;
+	private String trangThai;
+	private NhanVien nhanVien;
+	private KhachHang khahHang;
+	private KhuyenMai khuyenMai;
+	
+	public HoaDon() {
+		super();
+	}
+
+	public HoaDon(String maHD, LocalDateTime ngayLap, BigDecimal tongTienHang, BigDecimal tienGiamGia,
+			BigDecimal tongThanhToan, String phuongThucThanhToan, boolean yeuCauGiaoLapDat, String ghiChuGiaoLapDat,
+			String trangThai) {
+		super();
+		this.maHD = maHD;
+		this.ngayLap = ngayLap;
+		this.tongTienHang = tongTienHang;
+		this.tienGiamGia = tienGiamGia;
+		this.tongThanhToan = tongThanhToan;
+		this.phuongThucThanhToan = phuongThucThanhToan;
+		this.yeuCauGiaoLapDat = yeuCauGiaoLapDat;
+		this.ghiChuGiaoLapDat = ghiChuGiaoLapDat;
+		this.trangThai = trangThai;
+	}
+
+	public String getMaHD() {
+		return maHD;
+	}
+
+	public void setMaHD(String maHD) {
+		this.maHD = maHD;
+	}
+
+	public LocalDateTime getNgayLap() {
+		return ngayLap;
+	}
+
+	public void setNgayLap(LocalDateTime ngayLap) {
+		this.ngayLap = ngayLap;
+	}
+
+	public BigDecimal getTongTienHang() {
+		return tongTienHang;
+	}
+
+	public void setTongTienHang(BigDecimal tongTienHang) {
+		this.tongTienHang = tongTienHang;
+	}
+
+	public BigDecimal getTienGiamGia() {
+		return tienGiamGia;
+	}
+
+	public void setTienGiamGia(BigDecimal tienGiamGia) {
+		this.tienGiamGia = tienGiamGia;
+	}
+
+	public BigDecimal getTongThanhToan() {
+		return tongThanhToan;
+	}
+
+	public void setTongThanhToan(BigDecimal tongThanhToan) {
+		this.tongThanhToan = tongThanhToan;
+	}
+
+	public String getPhuongThucThanhToan() {
+		return phuongThucThanhToan;
+	}
+
+	public void setPhuongThucThanhToan(String phuongThucThanhToan) {
+		this.phuongThucThanhToan = phuongThucThanhToan;
+	}
+
+	public boolean isYeuCauGiaoLapDat() {
+		return yeuCauGiaoLapDat;
+	}
+
+	public void setYeuCauGiaoLapDat(boolean yeuCauGiaoLapDat) {
+		this.yeuCauGiaoLapDat = yeuCauGiaoLapDat;
+	}
+
+	public String getGhiChuGiaoLapDat() {
+		return ghiChuGiaoLapDat;
+	}
+
+	public void setGhiChuGiaoLapDat(String ghiChuGiaoLapDat) {
+		this.ghiChuGiaoLapDat = ghiChuGiaoLapDat;
+	}
+
+	public String getTrangThai() {
+		return trangThai;
+	}
+
+	public void setTrangThai(String trangThai) {
+		this.trangThai = trangThai;
+	}
 }
