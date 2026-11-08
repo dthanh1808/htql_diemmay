@@ -107,4 +107,67 @@ public class HoaDon {
 	public void setTrangThai(String trangThai) {
 		this.trangThai = trangThai;
 	}
+    public static final String DA_TT = "Đã thanh toán", TRA_GOP = "Trả góp";
+    private String maNhanVien, ca, tenKhachHang, sdt, hang, tenKhuyenMai, doiTac;
+    private int kyHan;
+    private BigDecimal giamHoaDon = BigDecimal.ZERO, khachDua = BigDecimal.ZERO;
+    private java.util.List<Dong> chiTiet = new java.util.ArrayList<>();
+    public HoaDon(String ma, LocalDateTime ngay, String nv, String ca, String kh, String sdt,
+            String hang, String phuongThuc, String trangThai, BigDecimal giam, BigDecimal dua,
+            String giaoHang, String km, String doiTac, int kyHan, java.util.List<Dong> ds) {
+        maHD = ma; ngayLap = ngay; maNhanVien = nv; this.ca = ca; tenKhachHang = kh; this.sdt = sdt;
+        this.hang = hang; phuongThucThanhToan = phuongThuc; this.trangThai = trangThai;
+        giamHoaDon = giam; khachDua = dua; ghiChuGiaoLapDat = giaoHang;
+        tenKhuyenMai = km; this.doiTac = doiTac; this.kyHan = kyHan;
+        chiTiet = new java.util.ArrayList<>(ds);
+    }
+    public static class Dong {
+        private final String sku, ten, danhMuc;
+        private final int soLuong;
+        private final BigDecimal donGia, giamGia;
+        public Dong(String sku, String ten, String danhMuc, int soLuong, BigDecimal donGia, BigDecimal giamGia) {
+            this.sku = sku; this.ten = ten; this.danhMuc = danhMuc; this.soLuong = soLuong;
+            this.donGia = donGia; this.giamGia = giamGia;
+        }
+        public String sku() { return sku; }
+        public String ten() { return ten; }
+        public String danhMuc() { return danhMuc; }
+        public int soLuong() { return soLuong; }
+        public BigDecimal donGia() { return donGia; }
+        public BigDecimal giamGia() { return giamGia; }
+        public BigDecimal tienHang() { return donGia.multiply(BigDecimal.valueOf(soLuong)); }
+        public BigDecimal thanhTien() { return tienHang().subtract(giamGia); }
+    }
+    public String ma() { return maHD; }
+    public LocalDateTime ngay() { return ngayLap; }
+    public String nhanVien() { return maNhanVien; }
+    public String ca() { return ca; }
+    public String khachHang() { return tenKhachHang; }
+    public String sdt() { return sdt; }
+    public String hang() { return hang; }
+    public String phuongThuc() { return phuongThucThanhToan; }
+    public String trangThai() { return trangThai; }
+    public BigDecimal giamHoaDon() { return giamHoaDon; }
+    public BigDecimal khachDua() { return khachDua; }
+    public String giaoHang() { return ghiChuGiaoLapDat; }
+    public String khuyenMai() { return tenKhuyenMai; }
+    public String doiTac() { return doiTac; }
+    public int kyHan() { return kyHan; }
+    public java.util.List<Dong> chiTiet() { return java.util.Collections.unmodifiableList(chiTiet); }
+    public BigDecimal tienHang() {
+        BigDecimal tong = BigDecimal.ZERO;
+        for (Dong d : chiTiet) tong = tong.add(d.tienHang());
+        return tong;
+    }
+    public BigDecimal giamGia() {
+        BigDecimal tong = giamHoaDon;
+        for (Dong d : chiTiet) tong = tong.add(d.giamGia());
+        return tong;
+    }
+    public BigDecimal tongTien() { return tienHang().subtract(giamGia()); }
+    public boolean ghiNhanDoanhThu() { return DA_TT.equals(trangThai) || TRA_GOP.equals(trangThai); }
+    public HoaDon voiMa(String id) {
+        return new HoaDon(id, ngayLap, maNhanVien, ca, tenKhachHang, sdt, hang, phuongThucThanhToan,
+                trangThai, giamHoaDon, khachDua, ghiChuGiaoLapDat, tenKhuyenMai, doiTac, kyHan, chiTiet);
+    }
 }

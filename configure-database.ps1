@@ -22,7 +22,7 @@ EXEC sys.sp_executesql @sql;
 SET @sql=N'CREATE USER '+QUOTENAME(@login)+N' FOR LOGIN '+QUOTENAME(@login)+N';';
 EXEC sys.sp_executesql @sql;
 DECLARE @tables TABLE(name SYSNAME);
-INSERT INTO @tables VALUES(N'HoaDon'),(N'ChiTietHoaDon'),(N'GiaoDichTraGop'),(N'SanPham'),(N'DanhMuc'),(N'KhachHang'),(N'NhanVien'),(N'CaLamViec'),(N'LichLamViec'),(N'DanhMucCa'),(N'KhuyenMai');
+INSERT INTO @tables VALUES(N'HoaDon'),(N'ChiTietHoaDon'),(N'GiaoDichTraGop'),(N'SanPham'),(N'DanhMuc'),(N'KhachHang'),(N'NhanVien'),(N'CaLamViec'),(N'LichLamViec'),(N'DanhMucCa'),(N'KhuyenMai'),(N'PhieuBaoHanh');
 DECLARE @table SYSNAME;
 DECLARE table_cursor CURSOR LOCAL FAST_FORWARD FOR SELECT name FROM @tables;
 OPEN table_cursor;
@@ -36,6 +36,8 @@ END;
 CLOSE table_cursor;
 DEALLOCATE table_cursor;
 SET @sql=N'GRANT INSERT ON dbo.HoaDon TO '+QUOTENAME(@login)+N'; GRANT INSERT ON dbo.ChiTietHoaDon TO '+QUOTENAME(@login)+N'; GRANT INSERT ON dbo.GiaoDichTraGop TO '+QUOTENAME(@login)+N'; GRANT UPDATE ON dbo.SanPham TO '+QUOTENAME(@login)+N'; GRANT UPDATE ON dbo.KhachHang TO '+QUOTENAME(@login)+N'; GRANT UPDATE ON dbo.CaLamViec TO '+QUOTENAME(@login)+N';';
+EXEC sys.sp_executesql @sql;
+SET @sql=N'GRANT SELECT,INSERT,UPDATE,DELETE ON dbo.SanPham TO '+QUOTENAME(@login)+N'; GRANT SELECT,INSERT,UPDATE,DELETE ON dbo.DanhMuc TO '+QUOTENAME(@login)+N'; GRANT SELECT,INSERT,UPDATE,DELETE ON dbo.KhachHang TO '+QUOTENAME(@login)+N'; GRANT SELECT,UPDATE ON dbo.HangThanhVien TO '+QUOTENAME(@login)+N'; GRANT SELECT,INSERT,DELETE ON dbo.LichSuKhachHang TO '+QUOTENAME(@login)+N'; GRANT SELECT,INSERT ON dbo.ThongBaoKhuyenMai TO '+QUOTENAME(@login)+N';';
 EXEC sys.sp_executesql @sql;
 '@
         [void]$command.Parameters.Add('@login',[System.Data.SqlDbType]::NVarChar,128)

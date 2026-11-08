@@ -21,6 +21,8 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Biên dịch kiểm thử thất bại.' }
     & $java '-Djava.awt.headless=true' -cp 'build/test-classes;bin;src;lib/*' BusinessFeatureTest
     if ($LASTEXITCODE -ne 0) { throw 'Kiểm thử thất bại.' }
+    & $java '-Djava.awt.headless=true' -cp 'build/test-classes;bin;src;lib/*' ProductCustomerUiTest
+    if ($LASTEXITCODE -ne 0) { throw 'Kiểm thử UI khi mất kết nối thất bại.' }
     if ($SqlIntegration) {
         & $java -cp 'build/test-classes;bin;src;lib/*' SqlIntegrationTest
         if ($LASTEXITCODE -ne 0) { throw 'Kiểm thử SQL Server thất bại.' }

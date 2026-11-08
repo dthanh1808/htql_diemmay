@@ -1,6 +1,5 @@
 package ui;
 
-<<<<<<< HEAD
 import java.awt.AlphaComposite;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
@@ -30,11 +29,6 @@ import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
-=======
-import java.awt.*;
-import java.awt.event.*;
-import javax.swing.*;
->>>>>>> 957a42b1ddd343adedd740681bfd7a592402b483
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.MatteBorder;
 
@@ -46,21 +40,14 @@ public class UI_TrangChu extends JFrame implements ActionListener {
     private Color colorBlue = new Color(37, 99, 235);     
     private Color bgHover = new Color(239, 246, 255);     
 
-<<<<<<< HEAD
-=======
-    // Đã đổi btnCaLamViec thành btnHoaDon
->>>>>>> 957a42b1ddd343adedd740681bfd7a592402b483
     private MenuButton btnTongQuan, btnSanPham, btnKhachHang, btnBanHang, btnKhuyenMai, btnNhanVien, btnHoaDon, btnBaoHanh, btnBaoCao;
     
     private JPanel pnlCards; 
     private CardLayout cardLayout;
     private JPanel pnlBreadcrumb;
     private JLabel lblPageTitle; 
-<<<<<<< HEAD
     
     private PNL_KhachHang uiKhachHang;
-=======
->>>>>>> 957a42b1ddd343adedd740681bfd7a592402b483
 
     class HiDPIIcon implements Icon {
         private Image image;
@@ -198,11 +185,7 @@ public class UI_TrangChu extends JFrame implements ActionListener {
         btnBanHang = new MenuButton("Bán hàng", "/icon/ic_banhang.png");
         btnKhuyenMai = new MenuButton("Khuyến mãi", "/icon/ic_khuyenmai.png");
         btnNhanVien = new MenuButton("Nhân viên", "/icon/ic_nhanvien.png");
-<<<<<<< HEAD
         btnHoaDon = new MenuButton("Hóa đơn", "/icon/ic_hoadon.png");
-=======
-        btnHoaDon = new MenuButton("Hóa đơn", "/icon/ic_hoadon.png"); // Đã đổi từ Ca làm việc sang Hóa đơn
->>>>>>> 957a42b1ddd343adedd740681bfd7a592402b483
         btnBaoHanh = new MenuButton("Bảo hành", "/icon/ic_baohanh.png");
         btnBaoCao = new MenuButton("Báo cáo", "/icon/ic_baocao.png");
         
@@ -250,10 +233,6 @@ public class UI_TrangChu extends JFrame implements ActionListener {
         pnlTopLeft.add(lblPageTitle, BorderLayout.CENTER);
         pnlTopBar.add(pnlTopLeft, BorderLayout.WEST);
         
-<<<<<<< HEAD
-=======
-        // Khu vực thông tin User bên phải
->>>>>>> 957a42b1ddd343adedd740681bfd7a592402b483
         JPanel pnlUserInfo = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 25));
         pnlUserInfo.setBackground(bgWhite);
         pnlUserInfo.setBorder(new EmptyBorder(0, 0, 0, 30));
@@ -307,7 +286,6 @@ public class UI_TrangChu extends JFrame implements ActionListener {
         pnlCards = new JPanel(cardLayout);
         pnlCards.setBackground(bgMain);
         
-<<<<<<< HEAD
         uiKhachHang = new PNL_KhachHang();
         // =========================================================
         // KẾT NỐI SỰ KIỆN TỪ BÁN HÀNG QUA TRANG CHỦ
@@ -338,8 +316,8 @@ public class UI_TrangChu extends JFrame implements ActionListener {
         pnlCards.add(uiKhachHang, "KhachHang");        
         pnlCards.add(new PNL_BanHang(actionThanhToan, actionThemKhach), "BanHang");
         
-        pnlCards.add(new PNL_KhuyenMai(), "KhuyenMai");
-        pnlCards.add(new PNL_NhanVien(), "NhanVien");
+
+
         pnlCards.add(new PNL_LapHoaDon(veDanhSachHoaDon), "LapHoaDon");
         pnlCards.add(chiTietHoaDon, "ChiTietHoaDon");
         pnlCards.add(new PNL_HoaDon(
@@ -352,18 +330,8 @@ public class UI_TrangChu extends JFrame implements ActionListener {
                 setActiveMenu(btnHoaDon);
                 chuyenTrang(new String[][]{{"Hóa đơn", "HoaDon", "Quản lý hóa đơn"}, {"Chi tiết hóa đơn", "ChiTietHoaDon", "Chi tiết hóa đơn"}});
             }), "HoaDon");
-        pnlCards.add(new PNL_BaoHanh(), "BaoHanh");
+
         pnlCards.add(new PNL_BaoCao(), "BaoCao");
-=======
-        pnlCards.add(createTongQuanPanel(), "TongQuan"); 
-        pnlCards.add(new UI_SanPham(), "SanPham"); 
-        pnlCards.add(new UI_KhachHang(), "KhachHang");
-        pnlCards.add(new PNL_BanHang(), "BanHang");
-//        pnlCards.add(new PNL_KhuyenMai(), "KhuyenMai");
-//        pnlCards.add(new PNL_NhanVien(), "NhanVien");
-//        pnlCards.add(new PNL_HoaDon(), "HoaDon");
-        pnlCards.add(new PNL_BaoHanh(), "BaoHanh");
->>>>>>> 957a42b1ddd343adedd740681bfd7a592402b483
         
         
         btnTongQuan.addActionListener(this);
@@ -385,15 +353,10 @@ public class UI_TrangChu extends JFrame implements ActionListener {
     private JPanel createTongQuanPanel() {
         JPanel pnlContent = new JPanel(new BorderLayout());
         pnlContent.setBackground(bgMain);
-<<<<<<< HEAD
-=======
-        
->>>>>>> 957a42b1ddd343adedd740681bfd7a592402b483
         JLabel lblHint = new JLabel("Màn hình Tổng quan đang trống. Hãy bấm menu Sản phẩm bên trái!");
         lblHint.setHorizontalAlignment(SwingConstants.CENTER);
         lblHint.setForeground(Color.GRAY);
         pnlContent.add(lblHint, BorderLayout.CENTER);
-<<<<<<< HEAD
         return pnlContent;
     }
     
@@ -412,20 +375,6 @@ public class UI_TrangChu extends JFrame implements ActionListener {
             clickedBtn.setBackground(bgHover);
             clickedBtn.setForeground(colorBlue);
         }
-=======
-        
-        return pnlContent;
-    }
-
-    private JPanel createEmptyPanel(String msg) {
-        JPanel pnl = new JPanel(new BorderLayout());
-        pnl.setBackground(bgMain);
-        JLabel lbl = new JLabel(msg, SwingConstants.CENTER);
-        lbl.setFont(new Font("Segoe UI", Font.ITALIC, 16));
-        lbl.setForeground(textGray);
-        pnl.add(lbl, BorderLayout.CENTER);
-        return pnl;
->>>>>>> 957a42b1ddd343adedd740681bfd7a592402b483
     }
     
     public void chuyenTrang(String[][] path) {
@@ -477,35 +426,24 @@ public class UI_TrangChu extends JFrame implements ActionListener {
     @Override
     public void actionPerformed(ActionEvent e) {
         Object source = e.getSource();
-<<<<<<< HEAD
+        try {
+            if (source == btnKhuyenMai) moTrangSQL("KhuyenMai");
+            else if (source == btnNhanVien) moTrangSQL("NhanVien");
+            else if (source == btnBaoHanh) moTrangSQL("BaoHanh");
+        } catch (RuntimeException ex) {
+            javax.swing.JOptionPane.showMessageDialog(this, ex.getMessage(), "Không mở được trang", javax.swing.JOptionPane.ERROR_MESSAGE);
+            return;
+        }
         
         // Gọi hàm reset đổi màu cho nút vừa bấm
         setActiveMenu((MenuButton) source);
-=======
-        MenuButton[] btns = {btnTongQuan, btnSanPham, btnKhachHang, btnBanHang, btnKhuyenMai, btnNhanVien, btnHoaDon, btnBaoHanh, btnBaoCao};
-        for(MenuButton btn : btns) {
-            if(btn != null) {
-                btn.isActive = false;
-                btn.setBackground(bgWhite);
-                btn.setForeground(textGray);
-            }
-        }
-        
-        MenuButton clickedBtn = (MenuButton) source;
-        clickedBtn.isActive = true;
-        clickedBtn.setBackground(bgHover);
-        clickedBtn.setForeground(colorBlue);
->>>>>>> 957a42b1ddd343adedd740681bfd7a592402b483
 
         if (source == btnTongQuan) {
             chuyenTrang(new String[][]{{"Tổng quan", "TongQuan", "Tổng quan hệ thống"}});
         } else if (source == btnSanPham) {
             chuyenTrang(new String[][]{{"Sản phẩm", "SanPham", "Tra cứu sản phẩm"}});
         } else if (source == btnKhachHang) {
-<<<<<<< HEAD
             uiKhachHang.moDanhSach(); 
-=======
->>>>>>> 957a42b1ddd343adedd740681bfd7a592402b483
             chuyenTrang(new String[][]{{"Khách hàng", "KhachHang", "Quản lý khách hàng"}});
         } else if (source == btnBanHang) {
             chuyenTrang(new String[][]{{"Bán hàng", "BanHang", "Quản lý bán hàng tại quầy"}});
@@ -520,6 +458,15 @@ public class UI_TrangChu extends JFrame implements ActionListener {
         } else if (source == btnBaoCao) {
             chuyenTrang(new String[][]{{"Báo cáo", "BaoCao", "Thống kê doanh thu & Báo cáo"}});
         }
+    }
+
+    private void moTrangSQL(String ten) {
+        for (Component panel : pnlCards.getComponents()) if (ten.equals(panel.getName())) return;
+        JPanel panel;
+        if ("KhuyenMai".equals(ten)) panel = new PNL_KhuyenMai();
+        else if ("NhanVien".equals(ten)) panel = new PNL_NhanVien();
+        else panel = new PNL_BaoHanh();
+        panel.setName(ten); pnlCards.add(panel, ten);
     }
 
     public static void main(String[] args) {
