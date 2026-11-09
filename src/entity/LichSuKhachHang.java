@@ -2,7 +2,7 @@ package entity;
 
 import java.time.LocalDateTime;
 
-/** Dữ liệu trong phiên chạy; DAO trả về bản sao để tránh thay đổi ngoài ý muốn. */
+/** Một sự kiện hoạt động đã lưu trong bảng LichSuKhachHang. */
 public class LichSuKhachHang {
     private String khachHangId;
     private LocalDateTime thoiGian;

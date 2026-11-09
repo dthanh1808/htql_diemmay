@@ -553,7 +553,8 @@ public class PNL_KhachHang extends JPanel {
         notice.setVisible(true); revalidate();
     }
     private void perform(Runnable action) {
-        try { action.run(); } catch (IllegalArgumentException e) { message(e.getMessage(), false); }
+        try { action.run(); }
+        catch (RuntimeException e) { message(e.getMessage() == null ? "Thao tác không thành công." : e.getMessage(), false); }
     }
     private void install(String key, Component view) {
         for (Component c : content.getComponents()) if (key.equals(c.getName())) content.remove(c);
@@ -561,6 +562,7 @@ public class PNL_KhachHang extends JPanel {
     }
     private void showView(String key) { cards.show(content, key); notice.setVisible(false); revalidate(); repaint(); }
     private String money(BigDecimal value) { return NumberFormat.getIntegerInstance(Locale.forLanguageTag("vi-VN")).format(value) + " đ"; }
+    private String valueOrEmpty(String value) { return value == null ? "" : value; }
     private String html(String value) { return (value == null ? "" : value).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br>"); }
     private LocalDate date(String text, String label) {
         if (text.trim().isEmpty()) return null;
@@ -633,14 +635,14 @@ public class PNL_KhachHang extends JPanel {
         addFilter(filter, searchBox, "Tìm kiếm khách hàng", 0, 0, 2, 360);
         addFilter(filter, rankFilter, "Hạng thành viên", 2, 0, 1, 140);
         addFilter(filter, statusFilter, "Trạng thái", 3, 0, 1, 140);
-        addFilter(filter, fromDate, "Đăng ký từ ngày (dd/MM/yyyy)", 0, 1, 1, 174);
-        addFilter(filter, toDate, "Đến ngày (dd/MM/yyyy)", 1, 1, 1, 174);
+        addFilter(filter, fromDate, "Ngày sinh từ (dd/MM/yyyy)", 0, 1, 1, 174);
+        addFilter(filter, toDate, "Ngày sinh đến (dd/MM/yyyy)", 1, 1, 1, 174);
         JPanel filterButtons = new JPanel(new GridLayout(1, 2, 8, 0)); filterButtons.setOpaque(false);
         filterButtons.add(button("Áp dụng bộ lọc", 1, this::applyFilters)); filterButtons.add(button("Xóa bộ lọc", 2, this::resetFilters));
         addFilter(filter, filterButtons, " ", 2, 1, 2, 360);
         for (JTextField f : new JTextField[]{search, fromDate, toDate}) f.addActionListener(e -> perform(this::applyFilters));
         listView.add(filter, BorderLayout.NORTH);
-        table = createTable(new Object[0][7], new String[]{"Khách hàng", "Liên hệ", "Hạng thành viên", "Tổng chi tiêu", "Ngày đăng ký", "Trạng thái", "Thao tác"},
+        table = createTable(new Object[0][7], new String[]{"Khách hàng", "Liên hệ", "Hạng thành viên", "Tổng chi tiêu", "Ngày sinh", "Trạng thái", "Thao tác"},
                 new int[]{170, 170, 110, 120, 105, 130, 195}, 3);
         table.setName("customer.table"); model = (DefaultTableModel) table.getModel();
         table.getColumnModel().getColumn(0).setCellRenderer(new TwoLineRenderer(false));
@@ -656,11 +658,11 @@ public class PNL_KhachHang extends JPanel {
         table.getActionMap().put("viewCustomer", new AbstractAction() { public void actionPerformed(ActionEvent e) { if (table.getSelectedRow() >= 0) details(rowId(table.getSelectedRow()), false); }});
         table.getInputMap().put(KeyStroke.getKeyStroke("F2"), "editCustomer");
         table.getActionMap().put("editCustomer", new AbstractAction() { public void actionPerformed(ActionEvent e) { if (table.getSelectedRow() >= 0) editor(rowId(table.getSelectedRow())); }});
-        sort = createCombo("Tên A–Z", "Tên Z–A", "Chi tiêu tăng dần", "Chi tiêu giảm dần", "Mới đăng ký"); sort.setName("customer.sort");
+        sort = createCombo("Tên A–Z", "Tên Z–A", "Chi tiêu tăng dần", "Chi tiêu giảm dần", "Mã KH A–Z"); sort.setName("customer.sort");
         sort.addActionListener(e -> { page = 1; refreshList(); });
         JPanel heading = createHeader("Danh sách khách hàng", "", group(
                 button("Đăng ký khách hàng", 1, () -> editor(null)), button("Xuất CSV", 0, this::exportCsv),
-                button("Chính sách hạng thành viên", 0, this::policy), button("Gửi khuyến mãi", 0, this::promotion)), group(label("Sắp xếp:"), sort));
+                button("Làm mới danh sách", 0, this::backToList)), group(label("Sắp xếp:"), sort));
         summary = (JLabel) ((JPanel) heading.getComponent(0)).getComponent(1);
         RoundedPanel list = new RoundedPanel(); list.setLayout(new BorderLayout(0, 8)); list.add(heading, BorderLayout.NORTH);
         JPanel rows = new JPanel(new BorderLayout()); rows.setOpaque(false);
@@ -704,8 +706,10 @@ public class PNL_KhachHang extends JPanel {
         model.setRowCount(0);
         for (int i = start; i < end; i++) {
             KhachHang kh = filtered.get(i);
-            model.addRow(new Object[]{new String[]{kh.getHoTen(), kh.getId()}, new String[]{kh.getSoDienThoai(), kh.getEmail().isEmpty() ? "Chưa có email" : kh.getEmail()},
-                    dao.layHang(kh.getId()).getTen(), money(dao.tongChiTieu(kh.getId())), dateFormat.format(kh.getTaoLuc()), kh.isDangHoatDong() ? "Đang hoạt động" : "Ngừng hoạt động", ""});
+            model.addRow(new Object[]{new String[]{kh.getHoTen(), kh.getId()}, new String[]{kh.getSoDienThoai(), valueOrEmpty(kh.getEmail()).isBlank() ? "Chưa có email" : kh.getEmail()},
+                    dao.layHang(kh.getId()).getTen(), money(dao.tongChiTieu(kh.getId())),
+                    kh.getNgaySinh() == null ? "Chưa cung cấp" : dateFormat.format(kh.getNgaySinh()),
+                    kh.isDangHoatDong() ? "Đang hoạt động" : "Ngừng hoạt động", ""});
         }
         summary.setText(filtered.size() + " kết quả / " + dao.layTatCa().size() + " khách hàng");
         pageInfo.setText("Hiển thị " + (filtered.isEmpty() ? 0 : start + 1) + "–" + end + "/" + filtered.size() + " · Trang " + page + "/" + pages);
@@ -717,9 +721,10 @@ public class PNL_KhachHang extends JPanel {
     private class CustomerForm extends JPanel {
         private final KhachHang original;
         private final JTextField name, phone, email, address, birthday;
-        private final JTextArea note;
+        private final JTextArea notes;
+        private final JCheckBox promotionalConsent;
         private final JComboBox<String> state;
-        private final JCheckBox optIn;
+        private final JComboBox<String> gender;
         private boolean dirty;
         CustomerForm(String id) {
             super(new BorderLayout()); setOpaque(false);
@@ -727,33 +732,43 @@ public class PNL_KhachHang extends JPanel {
             if (id != null && original == null) throw new IllegalArgumentException("Khách hàng không còn tồn tại.");
             name = input("customer.form.name", original == null ? "" : original.getHoTen());
             phone = input("customer.form.phone", original == null ? "" : original.getSoDienThoai());
-            email = input("customer.form.email", original == null ? "" : original.getEmail());
-            address = input("customer.form.address", original == null ? "" : original.getDiaChi());
+            email = input("customer.form.email", original == null ? "" : valueOrEmpty(original.getEmail()));
+            address = input("customer.form.address", original == null ? "" : valueOrEmpty(original.getDiaChi()));
             birthday = input("customer.form.birthday", original == null || original.getNgaySinh() == null ? "" : dateFormat.format(original.getNgaySinh()));
-            note = area("customer.form.note", original == null ? "" : original.getGhiChu(), 3);
+            notes = area("customer.form.notes", original == null ? "" : original.getGhiChu(), 4);
+            promotionalConsent = new JCheckBox("Đồng ý nhận thông tin khuyến mãi");
+            promotionalConsent.setName("customer.form.marketingConsent");
+            promotionalConsent.setOpaque(false);
+            promotionalConsent.setSelected(original != null && original.isNhanKhuyenMai());
             state = createCombo("Đang hoạt động", "Ngừng hoạt động"); state.setName("customer.form.status"); state.setSelectedIndex(original == null || original.isDangHoatDong() ? 0 : 1);
-            optIn = new JCheckBox("Đồng ý nhận thông báo khuyến mãi", original != null && original.isNhanKhuyenMai()); optIn.setName("customer.form.optIn"); optIn.setOpaque(false);
+            gender = createCombo("Chưa cung cấp", "Nam", "Nữ"); gender.setName("customer.form.gender");
+            if (original != null && original.getGioiTinhNullable() != null) gender.setSelectedIndex(original.isGioiTinh() ? 1 : 2);
             FormPanel form = new FormPanel(); int r = 0;
             field(form, r++, "Họ tên *", name); field(form, r++, "Số điện thoại di động *", phone);
             field(form, r++, "Email (không bắt buộc)", email); field(form, r++, "Địa chỉ", address);
-            field(form, r++, "Ngày sinh (dd/MM/yyyy, không bắt buộc)", birthday); field(form, r++, "Ghi chú", new JScrollPane(note));
+            field(form, r++, "Ngày sinh (dd/MM/yyyy, không bắt buộc)", birthday);
+            field(form, r++, "Giới tính", gender);
+            field(form, r++, "Ghi chú nội bộ (không quá 500 ký tự)", scroll(notes));
+            field(form, r++, "Tùy chọn tiếp thị", promotionalConsent);
             if (original != null) field(form, r++, "Trạng thái", state);
-            field(form, r++, "Tùy chọn liên hệ", optIn);
-            field(form, r, "Lưu ý", label("<html>Chi tiêu và hạng được tính từ lịch sử mua hàng, không sửa trực tiếp tại hồ sơ.</html>"));
+            field(form, r, "Lưu ý", label("<html>Chi tiêu và hạng được tính từ giao dịch, không sửa trực tiếp tại hồ sơ.</html>"));
             JButton delete = button("Xóa khách hàng", 2, this::delete);
             delete.setEnabled(original != null && dao.coTheXoa(original.getId()));
-            delete.setToolTipText("Chỉ xóa khách đã ngừng hoạt động, chưa có giao dịch hoặc thông báo.");
+            delete.setToolTipText("Chỉ xóa khách đã ngừng hoạt động, chưa có hóa đơn hoặc phiếu bảo hành.");
             add(view(original == null ? "Đăng ký khách hàng" : "Chỉnh sửa khách hàng · " + original.getId(), scroll(form), actions(
                     button("Lưu khách hàng", 1, this::save), button("Hủy / Quay lại", 0, this::cancel), delete)));
             for (JTextField f : new JTextField[]{name, phone, email, address, birthday}) watch(f, () -> dirty = true);
-            note.getDocument().addDocumentListener(listener(() -> dirty = true));
-            state.addActionListener(e -> dirty = true); optIn.addActionListener(e -> dirty = true);
+            notes.getDocument().addDocumentListener(listener(() -> dirty = true));
+            promotionalConsent.addActionListener(e -> dirty = true);
+            state.addActionListener(e -> dirty = true); gender.addActionListener(e -> dirty = true);
         }
         private void save() {
             KhachHang kh = original == null ? new KhachHang() : new KhachHang(original);
             kh.setHoTen(name.getText()); kh.setSoDienThoai(phone.getText()); kh.setEmail(email.getText()); kh.setDiaChi(address.getText());
-            kh.setNgaySinh(date(birthday.getText(), "Ngày sinh")); kh.setGhiChu(note.getText());
-            kh.setNhanKhuyenMai(optIn.isSelected()); kh.setDangHoatDong(state.getSelectedIndex() == 0);
+            kh.setNgaySinh(date(birthday.getText(), "Ngày sinh"));
+            kh.setGioiTinh(gender.getSelectedIndex() == 0 ? null : gender.getSelectedIndex() == 1);
+            kh.setGhiChu(notes.getText()); kh.setNhanKhuyenMai(promotionalConsent.isSelected());
+            kh.setDangHoatDong(state.getSelectedIndex() == 0);
             KhachHang saved = original == null ? dao.them(kh) : dao.capNhat(kh);
             details(saved.getId(), false); message("Đã lưu khách hàng " + saved.getId() + ".", true);
         }
@@ -770,16 +785,18 @@ public class PNL_KhachHang extends JPanel {
         if (kh == null) throw new IllegalArgumentException("Khách hàng không còn tồn tại.");
         JTabbedPane tabs = new JTabbedPane(); tabs.setFont(new Font("Segoe UI", Font.PLAIN, 13)); tabs.setName("customer.tabs");
         FormPanel info = new FormPanel(); HangThanhVien hang = dao.layHang(id); BigDecimal total = dao.tongChiTieu(id);
-        field(info, 0, "Thông tin liên hệ", label("<html>" + html(kh.getHoTen()) + "<br>" + html(kh.getSoDienThoai()) + "<br>" + html(kh.getEmail()) + "<br>" + html(kh.getDiaChi()) + "</html>"));
+        field(info, 0, "Thông tin liên hệ", label("<html>" + html(kh.getHoTen()) + "<br>" + html(kh.getSoDienThoai()) + "<br>" + html(valueOrEmpty(kh.getEmail())) + "<br>" + html(valueOrEmpty(kh.getDiaChi())) + "</html>"));
         field(info, 1, "Ngày sinh", label(kh.getNgaySinh() == null ? "Chưa cung cấp" : dateFormat.format(kh.getNgaySinh())));
-        field(info, 2, "Trạng thái", label(kh.isDangHoatDong() ? "Đang hoạt động" : "Ngừng hoạt động"));
-        field(info, 3, "Chi tiêu và hạng thành viên", label(money(total) + " · " + hang.getTen() + " · Ưu đãi theo chính sách: " + hang.getPhanTramUuDai() + "%"));
+        field(info, 2, "Giới tính", label(kh.getGioiTinhNullable() == null ? "Chưa cung cấp" : kh.isGioiTinh() ? "Nam" : "Nữ"));
+        field(info, 3, "Trạng thái", label(kh.isDangHoatDong() ? "Đang hoạt động" : "Ngừng hoạt động"));
+        field(info, 4, "Chi tiêu và hạng thành viên", label(money(total) + " · " + hang.getTen() + " · Ưu đãi theo chính sách: " + hang.getPhanTramUuDai() + "%"));
         String progress = "Đã đạt hạng cao nhất.";
         for (HangThanhVien h : dao.layChinhSach()) if (h.getChiTieuToiThieu().compareTo(total) > 0) { progress = "Cần thêm " + money(h.getChiTieuToiThieu().subtract(total)) + " để đạt " + h.getTen() + "."; break; }
-        field(info, 4, "Tiến độ thăng hạng", label(progress));
-        field(info, 5, "Nhận khuyến mãi", label(kh.isNhanKhuyenMai() ? "Đã đồng ý" : "Chưa đồng ý"));
-        field(info, 6, "Đăng ký / cập nhật", label(timeFormat.format(kh.getTaoLuc()) + " / " + timeFormat.format(kh.getCapNhatLuc())));
-        field(info, 7, "Ghi chú", label("<html>" + html(kh.getGhiChu()) + "</html>"));
+        field(info, 5, "Tiến độ thăng hạng", label(progress));
+        field(info, 6, "Nhận thông tin khuyến mãi", label(kh.isNhanKhuyenMai() ? "Có đồng ý" : "Không đồng ý"));
+        field(info, 7, "Ngày tạo / cập nhật", label(timeFormat.format(kh.getTaoLuc()) + " / " + timeFormat.format(kh.getCapNhatLuc())));
+        String note = kh.getGhiChu().isBlank() ? "Chưa có" : "<html>" + html(kh.getGhiChu()).replace("\n", "<br>") + "</html>";
+        field(info, 8, "Ghi chú", label(note));
         tabs.addTab("Hồ sơ", scroll(info));
         ArrayList<GiaoDichKhachHang> transactions = dao.layGiaoDich(id); Object[][] rows = new Object[transactions.size()][4];
         for (int i = 0; i < rows.length; i++) { GiaoDichKhachHang gd = transactions.get(i); rows[i] = new Object[]{gd.getMaHoaDon(), timeFormat.format(gd.getThoiGian()), money(gd.getSoTien()), gd.getNoiDung()}; }
@@ -791,87 +808,17 @@ public class PNL_KhachHang extends JPanel {
         for (int i = 0; i < rows.length; i++) { LichSuKhachHang ls = events.get(i); rows[i] = new Object[]{timeFormat.format(ls.getThoiGian()), ls.getLoai(), ls.getNoiDung()}; }
         JTable audit = createTable(rows, new String[]{"Thời gian", "Hoạt động", "Nội dung"}, new int[]{165, 120, 650}, -1); audit.setName("customer.history");
         tabs.addTab("Lịch sử hoạt động", createScrollPane(audit));
-        ArrayList<ThongBaoKhuyenMai> notifications = dao.layThongBao(id);
-        JPanel messages = new JPanel(); messages.setBackground(Color.WHITE); messages.setLayout(new BoxLayout(messages, BoxLayout.Y_AXIS));
-        if (notifications.isEmpty()) messages.add(label("Chưa có thông báo khuyến mãi nội bộ."));
-        for (ThongBaoKhuyenMai tb : notifications) {
-            JTextArea text = area("customer.notification", tb.getId() + " · " + timeFormat.format(tb.getTaoLuc()) + "\n" + tb.getTieuDe() + "\n" + tb.getNoiDung(), 5);
-            text.setEditable(false); messages.add(text); messages.add(Box.createVerticalStrut(12));
-        }
-        tabs.addTab("Thông báo nội bộ", scroll(messages)); tabs.setSelectedIndex(history ? 2 : 0);
+        tabs.setSelectedIndex(history ? 2 : 0);
         install("detail", view("Khách hàng · " + kh.getId(), tabs, actions(button("Về danh sách", 0, this::backToList), button("Chỉnh sửa", 1, () -> editor(id)))));
-    }
-
-    private void policy() { install("policy", new PolicyForm()); }
-    private class PolicyForm extends JPanel {
-        private final ArrayList<HangThanhVien> ranks = dao.layChinhSach();
-        private final JTextField[] thresholds = new JTextField[4], discounts = new JTextField[4];
-        private boolean dirty;
-        PolicyForm() {
-            super(new BorderLayout()); setOpaque(false); FormPanel form = new FormPanel();
-            field(form, 0, "Cách tính", label("<html>Hạng tính theo tổng tiền thực thanh toán tích lũy. Lưu chính sách sẽ tính lại hạng cho mọi khách hàng.<br>Ưu đãi là cấu hình cho module bán hàng; chưa tự áp dụng vào hóa đơn.</html>"));
-            for (int i = 0; i < ranks.size(); i++) {
-                HangThanhVien h = ranks.get(i);
-                thresholds[i] = input("customer.policy.threshold." + i, h.getChiTieuToiThieu().toPlainString());
-                discounts[i] = input("customer.policy.discount." + i, "" + h.getPhanTramUuDai());
-                thresholds[i].setEditable(i != 0);
-                field(form, i * 2 + 1, h.getTen() + " · Chi tiêu tối thiểu (VND nguyên)", thresholds[i]);
-                field(form, i * 2 + 2, h.getTen() + " · Ưu đãi (%)", discounts[i]);
-                watch(thresholds[i], () -> dirty = true); watch(discounts[i], () -> dirty = true);
-            }
-            add(view("Chính sách hạng thành viên", scroll(form), actions(button("Lưu chính sách", 1, this::save),
-                    button("Hủy / Quay lại", 0, () -> discard(dirty, PNL_KhachHang.this::backToList, () -> showView("policy"))))));
-        }
-        private void save() {
-            ArrayList<HangThanhVien> draft = new ArrayList<>();
-            try { for (int i = 0; i < ranks.size(); i++) draft.add(new HangThanhVien(ranks.get(i).getTen(), new BigDecimal(thresholds[i].getText().trim()), Integer.parseInt(discounts[i].getText().trim()))); }
-            catch (NumberFormatException e) { throw new IllegalArgumentException("Ngưỡng chi tiêu và ưu đãi phải là số hợp lệ; nhập tiền không có dấu phân cách."); }
-            // DAO kiểm tra toàn bộ trước khi thay thế chính sách, tránh lưu dở dang.
-            confirm("Áp dụng chính sách mới?", "Chính sách mới sẽ ảnh hưởng hạng và ưu đãi của toàn bộ khách hàng hiện tại.", "Áp dụng chính sách", 1,
-                    () -> { dao.luuChinhSach(draft); backToList(); message("Đã lưu chính sách và tính lại hạng thành viên.", true); }, () -> showView("policy"));
-        }
-    }
-
-    private void promotion() { install("promotion", new PromotionForm()); }
-    private class PromotionForm extends JPanel {
-        private final JComboBox<String> target = createCombo("Tất cả", "Member", "Silver", "Gold", "Diamond");
-        private final JTextField title = input("customer.promo.title", "");
-        private final JTextArea body = area("customer.promo.body", "", 6);
-        private final JLabel recipientInfo = label("");
-        private final JButton send;
-        private boolean dirty;
-        PromotionForm() {
-            super(new BorderLayout()); setOpaque(false); FormPanel form = new FormPanel(); target.setName("customer.promo.rank");
-            field(form, 0, "Kênh thông báo", label("<html>Thông báo nội bộ, chỉ lưu trong phiên chạy này. Chưa tích hợp gửi email/SMS.<br>Chỉ khách đang hoạt động và đã đồng ý nhận khuyến mãi mới được chọn.</html>"));
-            field(form, 1, "Nhóm hạng thành viên", target); field(form, 2, "Người nhận đủ điều kiện", recipientInfo);
-            field(form, 3, "Tiêu đề * (tối đa 120 ký tự)", title); field(form, 4, "Nội dung * (tối đa 2.000 ký tự)", new JScrollPane(body));
-            send = button("Tạo thông báo nội bộ", 1, this::send);
-            add(view("Gửi thông báo khuyến mãi", scroll(form), actions(send, button("Hủy / Quay lại", 0,
-                    () -> discard(dirty, PNL_KhachHang.this::backToList, () -> showView("promotion"))))));
-            target.addActionListener(e -> { dirty = true; recipients(); }); watch(title, () -> dirty = true); body.getDocument().addDocumentListener(listener(() -> dirty = true)); recipients();
-        }
-        private String targetRank() { return target.getSelectedIndex() == 0 ? null : (String) target.getSelectedItem(); }
-        private void recipients() {
-            ArrayList<KhachHang> list = dao.nguoiNhanKhuyenMai(targetRank());
-            StringBuilder names = new StringBuilder("<html>" + list.size() + " khách hàng");
-            for (KhachHang kh : list) names.append("<br>").append(html(kh.getId() + " · " + kh.getHoTen()));
-            names.append("</html>"); recipientInfo.setText(names.toString()); send.setEnabled(!list.isEmpty());
-        }
-        private void send() {
-            String td = title.getText().trim(), nd = body.getText().trim();
-            if (td.isEmpty() || td.length() > 120 || nd.isEmpty() || nd.length() > 2000) throw new IllegalArgumentException("Nhập tiêu đề 1–120 ký tự và nội dung 1–2.000 ký tự.");
-            int count = dao.nguoiNhanKhuyenMai(targetRank()).size();
-            confirm("Xác nhận tạo thông báo", "Tạo thông báo nội bộ cho " + count + " khách hàng đủ điều kiện.\nTiêu đề: " + td + "\n\n" + nd, "Xác nhận tạo", 1,
-                    () -> { int created = dao.guiKhuyenMai(targetRank(), td, nd); backToList(); message("Đã tạo " + created + " thông báo nội bộ. Chưa gửi email/SMS.", true); }, () -> showView("promotion"));
-        }
     }
 
     /** Xuất toàn bộ kết quả đã áp dụng lọc, kể cả các trang chưa hiển thị. */
     public String taoCsv() {
-        StringBuilder csv = new StringBuilder("Mã KH,Họ tên,Số điện thoại,Email,Địa chỉ,Hạng,Tổng chi tiêu,Ngày đăng ký,Trạng thái,Nhận khuyến mãi\r\n");
+        StringBuilder csv = new StringBuilder("Mã KH,Họ tên,Số điện thoại,Email,Địa chỉ,Ngày sinh,Hạng,Tổng chi tiêu,Trạng thái\r\n");
         for (KhachHang kh : filtered) {
-            String[] values = {kh.getId(), kh.getHoTen(), kh.getSoDienThoai(), kh.getEmail(), kh.getDiaChi(), dao.layHang(kh.getId()).getTen(),
-                    dao.tongChiTieu(kh.getId()).toPlainString(), dateFormat.format(kh.getTaoLuc()), kh.isDangHoatDong() ? "Đang hoạt động" : "Ngừng hoạt động", kh.isNhanKhuyenMai() ? "Có" : "Không"};
+            String[] values = {kh.getId(), kh.getHoTen(), kh.getSoDienThoai(), valueOrEmpty(kh.getEmail()), valueOrEmpty(kh.getDiaChi()),
+                    kh.getNgaySinh() == null ? "" : dateFormat.format(kh.getNgaySinh()), dao.layHang(kh.getId()).getTen(),
+                    dao.tongChiTieu(kh.getId()).toPlainString(), kh.isDangHoatDong() ? "Đang hoạt động" : "Ngừng hoạt động"};
             for (int i = 0; i < values.length; i++) { if (i > 0) csv.append(','); String v = values[i];
                 if (v.stripLeading().matches("(?s)^[=+@-].*") || v.startsWith("\t") || v.startsWith("\r")) v = "'" + v;
                 csv.append('"').append(v.replace("\"", "\"\"")).append('"'); }

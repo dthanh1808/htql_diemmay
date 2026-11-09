@@ -43,21 +43,24 @@ CREATE TABLE SanPham (
     tenSP           NVARCHAR(150)  NOT NULL,
     donGia          DECIMAL(18,0)  NOT NULL,
     thoiGianBaoHanh INT            NULL,
+    slTon           INT            NOT NULL CONSTRAINT DF_SP_slTon DEFAULT 0,
     thuongHieu      NVARCHAR(100)  NOT NULL, 
     model           NVARCHAR(100)  NULL,
     moTa            NVARCHAR(500)  NULL,
-    nhomSanPham     NVARCHAR(100)  NULL,
+    nhomSanPham     NVARCHAR(100)  NOT NULL CONSTRAINT DF_SP_nhom DEFAULT N'Gọn nhẹ',
     trangThai       BIT            NOT NULL CONSTRAINT DF_SP_trangThai DEFAULT 1,
     maDanhMuc       VARCHAR(10)    NOT NULL,
-    maKM            VARCHAR(10)    NOT NULL,
+    maKM            VARCHAR(10)    NULL,
     CONSTRAINT PK_SanPham       PRIMARY KEY (maSKU),
-    CONSTRAINT UQ_SP_maVach     UNIQUE (maVach),
     CONSTRAINT CK_SP_donGia     CHECK (donGia > 0),
+    CONSTRAINT CK_SP_slTon      CHECK (slTon >= 0),
     CONSTRAINT CK_SP_baoHanh    CHECK (thoiGianBaoHanh >= 0),
     CONSTRAINT CK_SP_nhomSP     CHECK (nhomSanPham IN (N'Gọn nhẹ', N'Cồng kềnh')), 
     CONSTRAINT FK_SP_DanhMuc    FOREIGN KEY (maDanhMuc) REFERENCES DanhMuc(maDanhMuc),
     CONSTRAINT FK_SP_KhuyenMai  FOREIGN KEY (maKM) REFERENCES KhuyenMai(maKM)
 );
+-- Chỉ các barcode có giá trị phải duy nhất; sản phẩm chưa có barcode vẫn được thêm tự do.
+CREATE UNIQUE INDEX UX_SanPham_maVach_NotNull ON SanPham(maVach) WHERE maVach IS NOT NULL;
 
 /* ==========================================================
    4. DANH MỤC CA
@@ -148,12 +151,28 @@ CREATE TABLE KhachHang (
     hangTV              NVARCHAR(30)   NOT NULL CONSTRAINT DF_KH_hangTV DEFAULT N'Member', 
     tongChiTieuTichLuy  DECIMAL(18,0)  NOT NULL CONSTRAINT DF_KH_tctl DEFAULT 0,
     trangThai           BIT            NOT NULL CONSTRAINT DF_KH_trangThai DEFAULT 1,
+    ghiChu              NVARCHAR(500)  NULL,
+    nhanKhuyenMai       BIT            NOT NULL CONSTRAINT DF_KH_nhanKM DEFAULT 0,
+    ngayTao             DATETIME2(0)   NOT NULL CONSTRAINT DF_KH_ngayTao DEFAULT SYSDATETIME(),
+    ngayCapNhat         DATETIME2(0)   NOT NULL CONSTRAINT DF_KH_ngayCapNhat DEFAULT SYSDATETIME(),
     CONSTRAINT PK_KhachHang        PRIMARY KEY (maKH),
     CONSTRAINT UQ_KH_sdt           UNIQUE (sdt),
-    CONSTRAINT CK_KH_sdt           CHECK (sdt LIKE '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]' AND LEN(sdt) = 10),
+    CONSTRAINT CK_KH_sdt           CHECK (sdt LIKE '0[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]' AND LEN(sdt) = 10),
     CONSTRAINT CK_KH_tctl          CHECK (tongChiTieuTichLuy >= 0),
     CONSTRAINT CK_KH_hangTV        CHECK (hangTV IN (N'Member', N'Silver', N'Gold', N'Diamond'))
 );
+
+CREATE TABLE LichSuKhachHang (
+    maLichSu  BIGINT IDENTITY(1,1) NOT NULL,
+    maKH      VARCHAR(10)          NOT NULL,
+    thoiGian  DATETIME2(0)         NOT NULL CONSTRAINT DF_LSKH_thoiGian DEFAULT SYSDATETIME(),
+    hanhDong  NVARCHAR(50)         NOT NULL,
+    noiDung   NVARCHAR(500)        NOT NULL,
+    CONSTRAINT PK_LichSuKhachHang PRIMARY KEY (maLichSu),
+    CONSTRAINT FK_LSKH_KhachHang FOREIGN KEY (maKH) REFERENCES KhachHang(maKH) ON DELETE CASCADE
+);
+CREATE INDEX IX_LichSuKhachHang_maKH_thoiGian
+    ON LichSuKhachHang(maKH, thoiGian DESC, maLichSu DESC);
 
 /* ==========================================================
    10. HÓA ĐƠN
@@ -346,6 +365,50 @@ BEGIN
 END;
 GO
 
+/* --- Khách hàng: đồng bộ hạng từ chi tiêu và ghi nhận lần cập nhật --- */
+CREATE TRIGGER TRG_KH_DongBoHangVaNgayCapNhat
+ON KhachHang
+AFTER INSERT, UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF TRIGGER_NESTLEVEL() > 1 RETURN;
+
+    INSERT INTO LichSuKhachHang (maKH, hanhDong, noiDung)
+    SELECT i.maKH,
+        CASE
+            WHEN d.maKH IS NULL THEN N'Tạo hồ sơ'
+            WHEN i.nhanKhuyenMai <> d.nhanKhuyenMai THEN N'Đổi tùy chọn tiếp thị'
+            WHEN i.trangThai <> d.trangThai THEN N'Đổi trạng thái'
+            WHEN i.tongChiTieuTichLuy <> d.tongChiTieuTichLuy THEN N'Ghi nhận chi tiêu'
+            WHEN i.hangTV <> d.hangTV THEN N'Đồng bộ hạng thành viên'
+            ELSE N'Cập nhật hồ sơ'
+        END,
+        CASE
+            WHEN d.maKH IS NULL THEN N'Hồ sơ khách hàng được tạo.'
+            WHEN i.nhanKhuyenMai <> d.nhanKhuyenMai THEN N'Tùy chọn nhận thông tin khuyến mãi đã thay đổi.'
+            WHEN i.trangThai <> d.trangThai THEN N'Trạng thái hoạt động đã thay đổi.'
+            WHEN i.tongChiTieuTichLuy <> d.tongChiTieuTichLuy THEN N'Tổng chi tiêu tích lũy đã thay đổi.'
+            WHEN i.hangTV <> d.hangTV THEN N'Hạng thành viên được đồng bộ theo chi tiêu.'
+            ELSE N'Thông tin hồ sơ khách hàng đã được cập nhật.'
+        END
+    FROM inserted i
+    LEFT JOIN deleted d ON d.maKH = i.maKH;
+
+    UPDATE kh
+    SET hangTV = CASE
+            WHEN kh.tongChiTieuTichLuy >= 70000000 THEN N'Diamond'
+            WHEN kh.tongChiTieuTichLuy >= 35000000 THEN N'Gold'
+            WHEN kh.tongChiTieuTichLuy >= 15000000 THEN N'Silver'
+            ELSE N'Member'
+        END,
+        ngayCapNhat = CASE WHEN EXISTS (SELECT 1 FROM deleted)
+                           THEN SYSDATETIME() ELSE kh.ngayCapNhat END
+    FROM KhachHang kh
+    JOIN inserted i ON i.maKH = kh.maKH;
+END;
+GO
+
 
 USE QuanLyBanHang;
 GO
@@ -390,17 +453,17 @@ INSERT INTO KhuyenMai (maKM, tenKM, giaTriGiam, loaiKM, phamViApDung, doiTuongAp
 /* ==========================================================
    3. SẢN PHẨM (10 dòng)
    ========================================================== */
-INSERT INTO SanPham (maSKU, maVach, tenSP, donGia, thoiGianBaoHanh, thuongHieu, model, moTa, nhomSanPham, trangThai, maDanhMuc, maKM) VALUES
-('SKU001', '8935001230011', N'Laptop ASUS ROG Strix G15', 28990000, 24, N'ASUS', 'G15 G513', N'Laptop Gaming mạnh mẽ, RTX 3060', N'Cồng kềnh', 1, 'DM01', 'KM01'),
-('SKU002', '8935001230028', N'Laptop MacBook Air M2 2022', 26990000, 12, N'Apple', 'MacBook Air M2', N'Siêu mỏng nhẹ, pin 18 tiếng', N'Gọn nhẹ', 1, 'DM01', 'KM01'),
-('SKU003', '8935001230035', N'Điện thoại iPhone 15 Pro Max 256GB', 33990000, 12, N'Apple', 'iPhone 15 Pro Max', N'Titan tự nhiên, chip A17 Pro', N'Gọn nhẹ', 1, 'DM02', 'KM01'),
-('SKU004', '8935001230042', N'Tai nghe Sony WH-1000XM5', 7490000, 12, N'Sony', 'WH-1000XM5', N'Chống ồn chủ động đỉnh cao', N'Gọn nhẹ', 1, 'DM03', 'KM02'),
-('SKU005', '8935001230059', N'Màn hình Dell UltraSharp U2723QE', 13990000, 36, N'Dell', 'U2723QE', N'Màn hình đồ họa 4K IPS Black', N'Cồng kềnh', 0, 'DM04', 'KM02'),
-('SKU006', '8935001230066', N'Đồng hồ Apple Watch Series 9', 10490000, 12, N'Apple', 'Series 9 GPS', N'Màn hình sáng hơn, chip S9', N'Gọn nhẹ', 1, 'DM05', 'KM02'),
-('SKU007', '8935001230073', N'Router Wifi 6 ASUS RT-AX58U', 2490000, 24, N'ASUS', 'RT-AX58U', N'Tốc độ cao, phủ sóng rộng', N'Gọn nhẹ', 1, 'DM06', 'KM05'),
-('SKU008', '8935001230080', N'Loa Bluetooth JBL Charge 5', 3690000, 12, N'JBL', 'Charge 5', N'Chống nước IP67, pin 20 giờ', N'Gọn nhẹ', 1, 'DM03', 'KM05'),
-('SKU009', '8935001230097', N'Điện thoại Samsung Galaxy S24 Ultra', 29990000, 12, N'Samsung', 'S24 Ultra', N'Tích hợp AI thông minh', N'Gọn nhẹ', 1, 'DM02', 'KM01'),
-('SKU010', '8935001230103', N'Laptop Lenovo Legion 5 Pro', 31990000, 24, N'Lenovo', 'Legion 5 Pro', N'Hiệu năng khủng cho game thủ', N'Cồng kềnh', 1, 'DM01', 'KM04');
+INSERT INTO SanPham (maSKU, maVach, tenSP, donGia, thoiGianBaoHanh, thuongHieu, model, moTa, nhomSanPham, trangThai, slTon, maDanhMuc, maKM) VALUES
+('SKU001', '8935001230011', N'Laptop ASUS ROG Strix G15', 28990000, 24, N'ASUS', 'G15 G513', N'Laptop Gaming mạnh mẽ, RTX 3060', N'Cồng kềnh', 1, 10, 'DM01', 'KM01'),
+('SKU002', '8935001230028', N'Laptop MacBook Air M2 2022', 26990000, 12, N'Apple', 'MacBook Air M2', N'Siêu mỏng nhẹ, pin 18 tiếng', N'Gọn nhẹ', 1, 10, 'DM01', NULL),
+('SKU003', '8935001230035', N'Điện thoại iPhone 15 Pro Max 256GB', 33990000, 12, N'Apple', 'iPhone 15 Pro Max', N'Titan tự nhiên, chip A17 Pro', N'Gọn nhẹ', 1, 10, 'DM02', 'KM01'),
+('SKU004', '8935001230042', N'Tai nghe Sony WH-1000XM5', 7490000, 12, N'Sony', 'WH-1000XM5', N'Chống ồn chủ động đỉnh cao', N'Gọn nhẹ', 1, 10, 'DM03', 'KM02'),
+('SKU005', '8935001230059', N'Màn hình Dell UltraSharp U2723QE', 13990000, 36, N'Dell', 'U2723QE', N'Màn hình đồ họa 4K IPS Black', N'Cồng kềnh', 0, 10, 'DM04', NULL),
+('SKU006', '8935001230066', N'Đồng hồ Apple Watch Series 9', 10490000, 12, N'Apple', 'Series 9 GPS', N'Màn hình sáng hơn, chip S9', N'Gọn nhẹ', 1, 10, 'DM05', 'KM02'),
+('SKU007', '8935001230073', N'Router Wifi 6 ASUS RT-AX58U', 2490000, 24, N'ASUS', 'RT-AX58U', N'Tốc độ cao, phủ sóng rộng', N'Gọn nhẹ', 1, 10, 'DM06', 'KM05'),
+('SKU008', '8935001230080', N'Loa Bluetooth JBL Charge 5', 3690000, 12, N'JBL', 'Charge 5', N'Chống nước IP67, pin 20 giờ', N'Gọn nhẹ', 1, 10, 'DM03', NULL),
+('SKU009', '8935001230097', N'Điện thoại Samsung Galaxy S24 Ultra', 29990000, 12, N'Samsung', 'S24 Ultra', N'Tích hợp AI thông minh', N'Gọn nhẹ', 1, 10, 'DM02', 'KM01'),
+('SKU010', '8935001230103', N'Laptop Lenovo Legion 5 Pro', 31990000, 24, N'Lenovo', 'Legion 5 Pro', N'Hiệu năng khủng cho game thủ', N'Cồng kềnh', 1, 10, 'DM01', NULL);
 
 /* ==========================================================
    4. DANH MỤC CA (4 dòng)
