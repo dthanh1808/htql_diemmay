@@ -15,8 +15,8 @@ import java.util.Locale;
 import java.util.Map;
 import dao.DuLieuTam;
 import dao.SanPhamDAO;
-import dao.DanhMucDAO;
 import entity.DanhMuc;
+import entity.KhuyenMai;
 import entity.SanPham;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -28,7 +28,6 @@ import javax.swing.table.TableCellRenderer;
 public class PNL_SanPham extends JPanel {
 
     private final SanPhamDAO sanPhamDAO;
-    private final DanhMucDAO danhMucDAO;
     private final CardLayout viewLayout = new CardLayout();
     private final JPanel views = new JPanel(viewLayout);
     private final JLabel notice = new JLabel();
@@ -569,7 +568,6 @@ public class PNL_SanPham extends JPanel {
 
     public PNL_SanPham(DuLieuTam duLieu) {
         sanPhamDAO = new SanPhamDAO(duLieu);
-        danhMucDAO = new DanhMucDAO(duLieu);
         initialiseShell();
         initialiseList();
     }
@@ -616,7 +614,7 @@ public class PNL_SanPham extends JPanel {
 
     private void perform(Runnable action) {
         try { action.run(); }
-        catch (IllegalArgumentException e) { message(e.getMessage(), false); }
+        catch (RuntimeException e) { message(e.getMessage() == null ? "Thao tác không thành công." : e.getMessage(), false); }
     }
 
     private void initialiseList() {
@@ -769,7 +767,7 @@ public class PNL_SanPham extends JPanel {
         String brand = appliedFilter.thuongHieu;
         categoryFilter.removeAllItems();
         categoryFilter.addItem(new DanhMuc(null, "Tất cả", ""));
-        for (DanhMuc c : danhMucDAO.layTatCa()) categoryFilter.addItem(c);
+        for (DanhMuc c : sanPhamDAO.layDanhSachDanhMuc()) categoryFilter.addItem(c);
         selectCategory(categoryFilter, category);
         brandFilter.removeAllItems(); brandFilter.addItem("Tất cả");
         for (String value : sanPhamDAO.layThuongHieu()) brandFilter.addItem(value);
@@ -788,7 +786,7 @@ public class PNL_SanPham extends JPanel {
 
     private void selectCategory(JComboBox<DanhMuc> combo, String id) {
         for (int i = 0; i < combo.getItemCount(); i++) {
-            if (java.util.Objects.equals(combo.getItemAt(i).getId(), id)) { combo.setSelectedIndex(i); return; }
+            if (java.util.Objects.equals(combo.getItemAt(i).getMaDM(), id)) { combo.setSelectedIndex(i); return; }
         }
         if (combo.getItemCount() > 0) combo.setSelectedIndex(0);
     }
@@ -797,7 +795,7 @@ public class PNL_SanPham extends JPanel {
         BoLoc loc = new BoLoc();
         DanhMuc dm = (DanhMuc) categoryFilter.getSelectedItem();
         loc.tuKhoa = searchInput.getText().trim();
-        loc.danhMucId = dm == null ? null : dm.getId();
+        loc.danhMucId = dm == null ? null : dm.getMaDM();
         if (brandFilter.getSelectedIndex() > 0) loc.thuongHieu = (String) brandFilter.getSelectedItem();
         loc.khoangGia = priceFilter.getSelectedIndex();
         if (warrantyFilter.getSelectedIndex() > 0) {
@@ -837,7 +835,7 @@ public class PNL_SanPham extends JPanel {
         productModel.setRowCount(0);
         for (int i = batDau; i < ketThuc; i++) {
             SanPham sp = ketQua.get(i);
-            productModel.addRow(new Object[]{sp, danhMucDAO.layTen(sp.getDanhMucId()), sp.getThuongHieu(),
+            productModel.addRow(new Object[]{sp, sanPhamDAO.layTenDanhMuc(sp.getDanhMucId()), sp.getThuongHieu(),
                     money(sp.getGiaBan()), warranty(sp.getBaoHanhThang()),
                     sp.isDangKinhDoanh() ? "Đang kinh doanh" : "Ngừng kinh doanh", ""});
         }
@@ -914,19 +912,19 @@ public class PNL_SanPham extends JPanel {
         if (p == null) { showList(); message("Sản phẩm không còn tồn tại.", false); return; }
         clearMessage();
         JPanel form = new JPanel(new GridBagLayout()); form.setOpaque(false);
-        JLabel image = new JLabel(productImage(p, 160)); image.setHorizontalAlignment(SwingConstants.CENTER);
-        formItem(form, "Hình ảnh", image, 0, 0, 2, 170);
-        detailItem(form, "Tên sản phẩm", p.getTen(), 0, 1, 2);
-        detailItem(form, "SKU", p.getSku(), 0, 2, 1);
-        detailItem(form, "Danh mục", danhMucDAO.layTen(p.getDanhMucId()), 1, 2, 1);
+        detailItem(form, "Tên sản phẩm", p.getTen(), 0, 0, 2);
+        detailItem(form, "SKU", p.getSku(), 0, 1, 1);
+        detailItem(form, "Danh mục", sanPhamDAO.layTenDanhMuc(p.getDanhMucId()), 1, 1, 1);
+        detailItem(form, "Mã vạch", p.getMaVach(), 0, 2, 1);
+        detailItem(form, "Model", p.getModel(), 1, 2, 1);
         detailItem(form, "Thương hiệu", p.getThuongHieu(), 0, 3, 1);
         detailItem(form, "Giá bán", money(p.getGiaBan()), 1, 3, 1);
         detailItem(form, "Bảo hành", warranty(p.getBaoHanhThang()), 0, 4, 1);
-        detailItem(form, "Trạng thái", p.isDangKinhDoanh() ? "Đang kinh doanh" : "Ngừng kinh doanh", 1, 4, 1);
-        DateTimeFormatter format = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-        detailItem(form, "Ngày tạo", format.format(p.getTaoLuc()), 0, 5, 1);
-        detailItem(form, "Cập nhật lần cuối", format.format(p.getCapNhatLuc()), 1, 5, 1);
-        formItem(form, "Mô tả / thông số kỹ thuật", textArea(p.getMoTa().isBlank() ? "Chưa có mô tả." : p.getMoTa(), false), 0, 6, 2, 110);
+        detailItem(form, "Khuyến mãi", p.getTenKhuyenMai(), 1, 4, 1);
+        detailItem(form, "Trạng thái", p.isDangKinhDoanh() ? "Đang kinh doanh" : "Ngừng kinh doanh", 0, 5, 1);
+        detailItem(form, "Nhóm sản phẩm", p.getNhomSP(), 1, 5, 1);
+        String moTa = p.getMoTa();
+        formItem(form, "Mô tả / thông số kỹ thuật", textArea(moTa == null || moTa.isBlank() ? "Chưa có mô tả." : moTa, false), 0, 6, 2, 110);
         JButton back = createButton("Về danh sách", null, 0), edit = createButton("Chỉnh sửa", "/icon/ic_chinhsua.png", 1);
         back.addActionListener(e -> showList()); edit.addActionListener(e -> showEditor(id));
         install("detail", pageBody("Chi tiết sản phẩm", p.getSku(), form, back, edit));
@@ -938,7 +936,7 @@ public class PNL_SanPham extends JPanel {
     }
 
 private void showEditor(String id) {
-        if (danhMucDAO.layTatCa().isEmpty()) {
+        if (sanPhamDAO.layDanhSachDanhMuc().isEmpty()) {
             showCategories(null);
             message("Hãy tạo ít nhất một danh mục trước khi thêm sản phẩm.", false);
             return;
@@ -958,58 +956,64 @@ private void showEditor(String id) {
     private class SanPhamForm extends JPanel {
         private final SanPham banGoc;
         private final JTextField sku = createInput("Ví dụ: TL002");
+        private final JTextField maVach = createInput("Mã vạch (không bắt buộc)");
         private final JTextField ten = createInput("Tên sản phẩm, tối đa 150 ký tự");
+        private final JTextField model = createInput("Model sản phẩm (không bắt buộc)");
         private final JTextField thuongHieu = createInput("Tên thương hiệu");
         private final JTextField gia = createInput("Số nguyên VND, ví dụ 12000000");
         private final JComboBox<DanhMuc> danhMuc = createCombo(new DanhMuc[0]);
+        private final JComboBox<KhuyenMai> khuyenMai = createCombo(new KhuyenMai[0]);
+        private final JComboBox<String> nhomSP = createCombo("Gọn nhẹ", "Cồng kềnh");
         private final JSpinner baoHanh = new JSpinner(new SpinnerNumberModel(12, 0, 120, 1));
         private final JComboBox<String> trangThai = createCombo("Đang kinh doanh", "Ngừng kinh doanh");
         private final JTextArea moTa = textArea("", true);
-        private final JLabel xemAnh = new JLabel();
-        private String anh = "";
         private ArrayList<String> noiDungBanDau;
 
         SanPhamForm(String id) {
             super(new BorderLayout());
             setOpaque(false);
             banGoc = sanPhamDAO.timTheoMa(id);
-            for (DanhMuc dm : danhMucDAO.layTatCa()) danhMuc.addItem(dm);
+            for (DanhMuc dm : sanPhamDAO.layDanhSachDanhMuc()) danhMuc.addItem(dm);
+            for (KhuyenMai km : sanPhamDAO.layDanhSachKhuyenMai()) khuyenMai.addItem(km);
+            khuyenMai.setRenderer(new DefaultListCellRenderer() {
+                @Override public Component getListCellRendererComponent(JList<?> list, Object value, int index,
+                        boolean selected, boolean focus) {
+                    super.getListCellRendererComponent(list, value, index, selected, focus);
+                    if (value instanceof KhuyenMai km) setText(km.getMaKM() + " · " + km.getTenKM() + " · " + km.getTrangThai());
+                    return this;
+                }
+            });
             sku.setName("product.form.sku");
+            maVach.setName("product.form.barcode");
             ten.setName("product.form.name");
+            model.setName("product.form.model");
             thuongHieu.setName("product.form.brand");
             gia.setName("product.form.price");
             danhMuc.setName("product.form.category");
+            khuyenMai.setName("product.form.promotion");
+            nhomSP.setName("product.form.group");
+            sku.setEditable(banGoc == null);
             baoHanh.setName("product.form.warranty");
             trangThai.setName("product.form.status");
             moTa.setName("product.form.description");
             gia.setHorizontalAlignment(SwingConstants.RIGHT);
             baoHanh.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-            xemAnh.setHorizontalAlignment(SwingConstants.CENTER);
             napDuLieu();
 
             JPanel form = new JPanel(new GridBagLayout());
             form.setOpaque(false);
-            formItem(form, "Tên sản phẩm *", ten, 0, 0, 2, 34);
-            formItem(form, "SKU * (duy nhất, tối đa 40 ký tự)", sku, 0, 1, 1, 34);
-            formItem(form, "Danh mục *", danhMuc, 1, 1, 1, 34);
-            formItem(form, "Thương hiệu *", thuongHieu, 0, 2, 1, 34);
-            formItem(form, "Giá bán * (VND, không dấu phân cách)", gia, 1, 2, 1, 34);
-            formItem(form, "Bảo hành (0–120 tháng; 0 là không bảo hành)", baoHanh, 0, 3, 1, 34);
-            formItem(form, "Trạng thái kinh doanh", trangThai, 1, 3, 1, 34);
-            formItem(form, "Mô tả / thông số kỹ thuật (tối đa 3.000 ký tự)", new JScrollPane(moTa), 0, 4, 2, 110);
-
-            JButton chonAnh = createButton("Chọn ảnh PNG / JPEG", null, 0);
-            JButton boAnh = createButton("Bỏ ảnh", null, 2);
-            chonAnh.addActionListener(e -> chonAnh());
-            boAnh.addActionListener(e -> {
-                anh = "";
-                xemAnh.setIcon(loadIcon("/icon/ic_sanpham.png", textGray, 48));
-            });
-            JPanel khungAnh = new JPanel(new BorderLayout(8, 0));
-            khungAnh.setOpaque(false);
-            khungAnh.add(xemAnh, BorderLayout.CENTER);
-            khungAnh.add(group(chonAnh, boAnh), BorderLayout.SOUTH);
-            formItem(form, "Ảnh không bắt buộc, tối đa 2 MB và 16 triệu điểm ảnh", khungAnh, 0, 5, 2, 150);
+            formItem(form, "SKU * (duy nhất, tối đa 20 ký tự; không đổi sau khi tạo)", sku, 0, 0, 1, 34);
+            formItem(form, "Tên sản phẩm *", ten, 1, 0, 1, 34);
+            formItem(form, "Mã vạch (không bắt buộc)", maVach, 0, 1, 1, 34);
+            formItem(form, "Model (không bắt buộc)", model, 1, 1, 1, 34);
+            formItem(form, "Danh mục *", danhMuc, 0, 2, 1, 34);
+            formItem(form, "Khuyến mãi *", khuyenMai, 1, 2, 1, 34);
+            formItem(form, "Thương hiệu *", thuongHieu, 0, 3, 1, 34);
+            formItem(form, "Giá bán * (VND, không dấu phân cách)", gia, 1, 3, 1, 34);
+            formItem(form, "Bảo hành (0–120 tháng; 0 là không bảo hành)", baoHanh, 0, 4, 1, 34);
+            formItem(form, "Nhóm sản phẩm *", nhomSP, 1, 4, 1, 34);
+            formItem(form, "Trạng thái kinh doanh", trangThai, 0, 5, 1, 34);
+            formItem(form, "Mô tả / thông số kỹ thuật (tối đa 500 ký tự)", new JScrollPane(moTa), 0, 6, 2, 110);
 
             JButton huy = createButton("Hủy / Quay lại", null, 0);
             JButton luu = createButton("Lưu sản phẩm", null, 1);
@@ -1035,54 +1039,68 @@ private void showEditor(String id) {
 
         private void napDuLieu() {
             if (banGoc == null) {
-                xemAnh.setIcon(loadIcon("/icon/ic_sanpham.png", textGray, 48));
                 return;
             }
             sku.setText(banGoc.getSku());
+            maVach.setText(banGoc.getMaVach());
             ten.setText(banGoc.getTen());
+            model.setText(banGoc.getModel());
             thuongHieu.setText(banGoc.getThuongHieu());
             gia.setText(banGoc.getGiaBan().toPlainString());
             selectCategory(danhMuc, banGoc.getDanhMucId());
+            for (int i = 0; i < khuyenMai.getItemCount(); i++) {
+                if (java.util.Objects.equals(khuyenMai.getItemAt(i).getMaKM(), banGoc.getMaKM())) {
+                    khuyenMai.setSelectedIndex(i); break;
+                }
+            }
+            nhomSP.setSelectedItem(banGoc.getNhomSP());
             baoHanh.setValue(banGoc.getBaoHanhThang());
             trangThai.setSelectedIndex(banGoc.isDangKinhDoanh() ? 0 : 1);
             moTa.setText(banGoc.getMoTa());
-            anh = banGoc.getAnhBase64();
-            xemAnh.setIcon(productImage(banGoc, 100));
         }
 
         private ArrayList<String> layNoiDung() {
             ArrayList<String> noiDung = new ArrayList<>();
             noiDung.add(sku.getText());
+            noiDung.add(maVach.getText());
             noiDung.add(ten.getText());
+            noiDung.add(model.getText());
             noiDung.add(thuongHieu.getText());
             noiDung.add(gia.getText());
             DanhMuc dm = (DanhMuc) danhMuc.getSelectedItem();
-            noiDung.add(dm == null ? "" : dm.getId());
+            noiDung.add(dm == null ? "" : dm.getMaDM());
+            KhuyenMai km = (KhuyenMai) khuyenMai.getSelectedItem();
+            noiDung.add(km == null ? "" : km.getMaKM());
+            noiDung.add((String) nhomSP.getSelectedItem());
             noiDung.add(((JSpinner.DefaultEditor) baoHanh.getEditor()).getTextField().getText());
             noiDung.add(String.valueOf(trangThai.getSelectedIndex()));
             noiDung.add(moTa.getText());
-            noiDung.add(anh);
             return noiDung;
         }
 
         private void luu() {
             try { baoHanh.commitEdit(); }
             catch (java.text.ParseException e) { throw new IllegalArgumentException("Bảo hành phải là số nguyên từ 0 đến 120 tháng."); }
-            if (!gia.getText().trim().matches("[0-9]{1,12}")) {
-                throw new IllegalArgumentException("Giá bán phải là số nguyên VND, không có dấu phân cách, tối đa 12 chữ số.");
+            if (!gia.getText().trim().matches("[0-9]{1,18}")) {
+                throw new IllegalArgumentException("Giá bán phải là số nguyên VND, không có dấu phân cách, tối đa 18 chữ số.");
             }
             DanhMuc dm = (DanhMuc) danhMuc.getSelectedItem();
             SanPham sp = new SanPham();
             if (banGoc != null) sp.setId(banGoc.getId());
             sp.setSku(sku.getText());
+            sp.setMaVach(maVach.getText().trim().isEmpty() ? null : maVach.getText().trim());
             sp.setTen(ten.getText());
-            sp.setDanhMucId(dm == null ? null : dm.getId());
+            sp.setModel(model.getText());
+            sp.setDanhMucId(dm == null ? null : dm.getMaDM());
+            KhuyenMai km = (KhuyenMai) khuyenMai.getSelectedItem();
+            if (km == null) throw new IllegalArgumentException("Vui lòng chọn khuyến mãi.");
+            sp.setMaKM(km.getMaKM());
             sp.setThuongHieu(thuongHieu.getText());
             sp.setGiaBan(new BigDecimal(gia.getText().trim()));
             sp.setBaoHanhThang(((Number) baoHanh.getValue()).intValue());
             sp.setDangKinhDoanh(trangThai.getSelectedIndex() == 0);
             sp.setMoTa(moTa.getText());
-            sp.setAnhBase64(anh);
+            sp.setNhomSP((String) nhomSP.getSelectedItem());
 
             SanPham daLuu;
             if (banGoc == null) daLuu = sanPhamDAO.them(sp);
@@ -1117,21 +1135,6 @@ private void showEditor(String id) {
                     }), () -> viewLayout.show(views, "editor"));
         }
 
-        private void chonAnh() {
-            JFileChooser chooser = new JFileChooser();
-            chooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Ảnh PNG, JPEG (tối đa 2 MB)", "png", "jpg", "jpeg"));
-            if (chooser.showOpenDialog(PNL_SanPham.this) != JFileChooser.APPROVE_OPTION) return;
-            try {
-                String anhMoi = SanPhamDAO.docAnh(chooser.getSelectedFile().toPath());
-                ImageIcon icon = new ImageIcon(Base64.getDecoder().decode(anhMoi));
-                double tyLe = Math.min(100.0 / icon.getIconWidth(), 100.0 / icon.getIconHeight());
-                xemAnh.setIcon(new ImageIcon(icon.getImage().getScaledInstance(
-                        Math.max(1, (int) (icon.getIconWidth() * tyLe)),
-                        Math.max(1, (int) (icon.getIconHeight() * tyLe)), Image.SCALE_SMOOTH)));
-                anh = anhMoi;
-                clearMessage();
-            } catch (IOException | IllegalArgumentException e) { message(e.getMessage(), false); }
-        }
     }
 
     private void confirm(String title, String description, String action, Runnable yes, Runnable no) {
@@ -1154,7 +1157,7 @@ private void showEditor(String id) {
     }
 
     private class DanhMucPanel extends JPanel {
-        private final ArrayList<DanhMuc> danhSach = danhMucDAO.layTatCa();
+        private final ArrayList<DanhMuc> danhSach = sanPhamDAO.layDanhSachDanhMuc();
         private final JTable table;
         private final JTextField ten = createInput("Tên danh mục, tối đa 80 ký tự");
         private final JTextArea moTa = textArea("", true);
@@ -1173,7 +1176,7 @@ private void showEditor(String id) {
             Object[][] rows = new Object[danhSach.size()][3];
             for (int i = 0; i < danhSach.size(); i++) {
                 DanhMuc dm = danhSach.get(i);
-                rows[i] = new Object[]{dm.getTen(), danhMucDAO.demSanPham(dm.getId()), dm.getMoTa()};
+                rows[i] = new Object[]{dm.getTenDM(), sanPhamDAO.demSanPhamTheoDanhMuc(dm.getMaDM()), dm.getMoTa()};
             }
             table = createTable(rows, new String[]{"Danh mục", "Số sản phẩm", "Mô tả"}, new int[]{145, 110, 150}, 1);
             table.setName("category.table");
@@ -1193,7 +1196,7 @@ private void showEditor(String id) {
             form.setOpaque(false);
             formItem(form, " ", cheDo, 0, 0, 2, 24);
             formItem(form, "Tên danh mục *", ten, 0, 1, 2, 34);
-            formItem(form, "Mô tả (tối đa 1.000 ký tự)", new JScrollPane(moTa), 0, 2, 2, 110);
+            formItem(form, "Mô tả (tối đa 255 ký tự)", new JScrollPane(moTa), 0, 2, 2, 110);
             formItem(form, "Sử dụng", suDung, 0, 3, 2, 42);
             JButton luu = createButton("Lưu danh mục", null, 1);
             luu.addActionListener(e -> perform(() -> luu()));
@@ -1225,7 +1228,7 @@ private void showEditor(String id) {
             add(panel, BorderLayout.CENTER);
             if (selectedId != null) {
                 for (int i = 0; i < danhSach.size(); i++) {
-                    if (danhSach.get(i).getId().equals(selectedId)) { table.setRowSelectionInterval(i, i); break; }
+                    if (danhSach.get(i).getMaDM().equals(selectedId)) { table.setRowSelectionInterval(i, i); break; }
                 }
             }
         }
@@ -1237,13 +1240,13 @@ private void showEditor(String id) {
         private void napDanhMuc(int dong) {
             DanhMuc dm = danhSach.get(table.convertRowIndexToModel(dong));
             dongTruoc = dong;
-            maDangSua = dm.getId();
-            ten.setText(dm.getTen());
+            maDangSua = dm.getMaDM();
+            ten.setText(dm.getTenDM());
             moTa.setText(dm.getMoTa());
-            tenBanDau = dm.getTen();
+            tenBanDau = dm.getTenDM();
             moTaBanDau = dm.getMoTa();
             cheDo.setText("Chỉnh sửa danh mục");
-            int soLuong = danhMucDAO.demSanPham(dm.getId());
+            int soLuong = sanPhamDAO.demSanPhamTheoDanhMuc(dm.getMaDM());
             suDung.setText("<html>" + soLuong + " sản phẩm. "
                     + (soLuong == 0 ? "Có thể xóa danh mục trống." : "Không thể xóa khi còn sản phẩm.") + "</html>");
             xoa.setEnabled(soLuong == 0);
@@ -1270,19 +1273,19 @@ private void showEditor(String id) {
         private void luu() {
             DanhMuc dm = new DanhMuc(maDangSua, ten.getText(), moTa.getText());
             DanhMuc daLuu;
-            if (maDangSua == null) daLuu = danhMucDAO.them(dm);
-            else daLuu = danhMucDAO.capNhat(dm);
+            if (maDangSua == null) daLuu = sanPhamDAO.themDanhMuc(dm);
+            else daLuu = sanPhamDAO.capNhatDanhMuc(dm);
             refreshChoices();
             refreshList();
-            showCategories(daLuu.getId());
-            message("Đã lưu danh mục " + daLuu.getTen() + ".", true);
+            showCategories(daLuu.getMaDM());
+            message("Đã lưu danh mục " + daLuu.getTenDM() + ".", true);
         }
 
         private void xoa() {
             if (maDangSua == null) return;
             confirm("Xóa danh mục?", "Chỉ xóa danh mục không chứa sản phẩm.", "Xóa danh mục",
                     () -> perform(() -> {
-                        danhMucDAO.xoa(maDangSua);
+                        sanPhamDAO.xoaDanhMuc(maDangSua);
                         refreshChoices();
                         refreshList();
                         showCategories(null);
