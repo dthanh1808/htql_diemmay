@@ -43,6 +43,7 @@ CREATE TABLE SanPham (
     tenSP           NVARCHAR(150)  NOT NULL,
     donGia          DECIMAL(18,0)  NOT NULL,
     thoiGianBaoHanh INT            NULL,
+    slTon           INT            NOT NULL CONSTRAINT DF_SP_slTon DEFAULT 0,
     thuongHieu      NVARCHAR(100)  NOT NULL, 
     model           NVARCHAR(100)  NULL,
     moTa            NVARCHAR(500)  NULL,
@@ -51,13 +52,15 @@ CREATE TABLE SanPham (
     maDanhMuc       VARCHAR(10)    NOT NULL,
     maKM            VARCHAR(10)    NOT NULL,
     CONSTRAINT PK_SanPham       PRIMARY KEY (maSKU),
-    CONSTRAINT UQ_SP_maVach     UNIQUE (maVach),
     CONSTRAINT CK_SP_donGia     CHECK (donGia > 0),
+    CONSTRAINT CK_SP_slTon      CHECK (slTon >= 0),
     CONSTRAINT CK_SP_baoHanh    CHECK (thoiGianBaoHanh >= 0),
     CONSTRAINT CK_SP_nhomSP     CHECK (nhomSanPham IN (N'Gọn nhẹ', N'Cồng kềnh')), 
     CONSTRAINT FK_SP_DanhMuc    FOREIGN KEY (maDanhMuc) REFERENCES DanhMuc(maDanhMuc),
     CONSTRAINT FK_SP_KhuyenMai  FOREIGN KEY (maKM) REFERENCES KhuyenMai(maKM)
 );
+-- SQL Server UNIQUE cho phép một NULL duy nhất; chỉ kiểm tra trùng mã vạch có giá trị.
+CREATE UNIQUE INDEX UX_SanPham_maVach_NotNull ON SanPham(maVach) WHERE maVach IS NOT NULL;
 
 /* ==========================================================
    4. DANH MỤC CA
@@ -390,17 +393,17 @@ INSERT INTO KhuyenMai (maKM, tenKM, giaTriGiam, loaiKM, phamViApDung, doiTuongAp
 /* ==========================================================
    3. SẢN PHẨM (10 dòng)
    ========================================================== */
-INSERT INTO SanPham (maSKU, maVach, tenSP, donGia, thoiGianBaoHanh, thuongHieu, model, moTa, nhomSanPham, trangThai, maDanhMuc, maKM) VALUES
-('SKU001', '8935001230011', N'Laptop ASUS ROG Strix G15', 28990000, 24, N'ASUS', 'G15 G513', N'Laptop Gaming mạnh mẽ, RTX 3060', N'Cồng kềnh', 1, 'DM01', 'KM01'),
-('SKU002', '8935001230028', N'Laptop MacBook Air M2 2022', 26990000, 12, N'Apple', 'MacBook Air M2', N'Siêu mỏng nhẹ, pin 18 tiếng', N'Gọn nhẹ', 1, 'DM01', 'KM01'),
-('SKU003', '8935001230035', N'Điện thoại iPhone 15 Pro Max 256GB', 33990000, 12, N'Apple', 'iPhone 15 Pro Max', N'Titan tự nhiên, chip A17 Pro', N'Gọn nhẹ', 1, 'DM02', 'KM01'),
-('SKU004', '8935001230042', N'Tai nghe Sony WH-1000XM5', 7490000, 12, N'Sony', 'WH-1000XM5', N'Chống ồn chủ động đỉnh cao', N'Gọn nhẹ', 1, 'DM03', 'KM02'),
-('SKU005', '8935001230059', N'Màn hình Dell UltraSharp U2723QE', 13990000, 36, N'Dell', 'U2723QE', N'Màn hình đồ họa 4K IPS Black', N'Cồng kềnh', 0, 'DM04', 'KM02'),
-('SKU006', '8935001230066', N'Đồng hồ Apple Watch Series 9', 10490000, 12, N'Apple', 'Series 9 GPS', N'Màn hình sáng hơn, chip S9', N'Gọn nhẹ', 1, 'DM05', 'KM02'),
-('SKU007', '8935001230073', N'Router Wifi 6 ASUS RT-AX58U', 2490000, 24, N'ASUS', 'RT-AX58U', N'Tốc độ cao, phủ sóng rộng', N'Gọn nhẹ', 1, 'DM06', 'KM05'),
-('SKU008', '8935001230080', N'Loa Bluetooth JBL Charge 5', 3690000, 12, N'JBL', 'Charge 5', N'Chống nước IP67, pin 20 giờ', N'Gọn nhẹ', 1, 'DM03', 'KM05'),
-('SKU009', '8935001230097', N'Điện thoại Samsung Galaxy S24 Ultra', 29990000, 12, N'Samsung', 'S24 Ultra', N'Tích hợp AI thông minh', N'Gọn nhẹ', 1, 'DM02', 'KM01'),
-('SKU010', '8935001230103', N'Laptop Lenovo Legion 5 Pro', 31990000, 24, N'Lenovo', 'Legion 5 Pro', N'Hiệu năng khủng cho game thủ', N'Cồng kềnh', 1, 'DM01', 'KM04');
+INSERT INTO SanPham (maSKU, maVach, tenSP, donGia, thoiGianBaoHanh, thuongHieu, model, moTa, nhomSanPham, trangThai, slTon, maDanhMuc, maKM) VALUES
+('SKU001', '8935001230011', N'Laptop ASUS ROG Strix G15', 28990000, 24, N'ASUS', 'G15 G513', N'Laptop Gaming mạnh mẽ, RTX 3060', N'Cồng kềnh', 1, 10, 'DM01', 'KM01'),
+('SKU002', '8935001230028', N'Laptop MacBook Air M2 2022', 26990000, 12, N'Apple', 'MacBook Air M2', N'Siêu mỏng nhẹ, pin 18 tiếng', N'Gọn nhẹ', 1, 10, 'DM01', 'KM01'),
+('SKU003', '8935001230035', N'Điện thoại iPhone 15 Pro Max 256GB', 33990000, 12, N'Apple', 'iPhone 15 Pro Max', N'Titan tự nhiên, chip A17 Pro', N'Gọn nhẹ', 1, 10, 'DM02', 'KM01'),
+('SKU004', '8935001230042', N'Tai nghe Sony WH-1000XM5', 7490000, 12, N'Sony', 'WH-1000XM5', N'Chống ồn chủ động đỉnh cao', N'Gọn nhẹ', 1, 10, 'DM03', 'KM02'),
+('SKU005', '8935001230059', N'Màn hình Dell UltraSharp U2723QE', 13990000, 36, N'Dell', 'U2723QE', N'Màn hình đồ họa 4K IPS Black', N'Cồng kềnh', 0, 10, 'DM04', 'KM02'),
+('SKU006', '8935001230066', N'Đồng hồ Apple Watch Series 9', 10490000, 12, N'Apple', 'Series 9 GPS', N'Màn hình sáng hơn, chip S9', N'Gọn nhẹ', 1, 10, 'DM05', 'KM02'),
+('SKU007', '8935001230073', N'Router Wifi 6 ASUS RT-AX58U', 2490000, 24, N'ASUS', 'RT-AX58U', N'Tốc độ cao, phủ sóng rộng', N'Gọn nhẹ', 1, 10, 'DM06', 'KM05'),
+('SKU008', '8935001230080', N'Loa Bluetooth JBL Charge 5', 3690000, 12, N'JBL', 'Charge 5', N'Chống nước IP67, pin 20 giờ', N'Gọn nhẹ', 1, 10, 'DM03', 'KM05'),
+('SKU009', '8935001230097', N'Điện thoại Samsung Galaxy S24 Ultra', 29990000, 12, N'Samsung', 'S24 Ultra', N'Tích hợp AI thông minh', N'Gọn nhẹ', 1, 10, 'DM02', 'KM01'),
+('SKU010', '8935001230103', N'Laptop Lenovo Legion 5 Pro', 31990000, 24, N'Lenovo', 'Legion 5 Pro', N'Hiệu năng khủng cho game thủ', N'Cồng kềnh', 1, 10, 'DM01', 'KM04');
 
 /* ==========================================================
    4. DANH MỤC CA (4 dòng)
