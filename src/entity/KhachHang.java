@@ -152,7 +152,7 @@ public class KhachHang {
     public boolean isNhanKhuyenMai() { return nhanKhuyenMai; }
     public void setNhanKhuyenMai(boolean nhanKM) { this.nhanKhuyenMai = nhanKM; }
 
-    public LocalDateTime getTaoLuc() { return taoLuc != null ? taoLuc : LocalDateTime.now(); }
+    public LocalDateTime getTaoLuc() { return taoLuc; }
     public void setTaoLuc(LocalDateTime luc) { this.taoLuc = luc; }
 
     public LocalDateTime getCapNhatLuc() { return capNhatLuc != null ? capNhatLuc : LocalDateTime.now(); }

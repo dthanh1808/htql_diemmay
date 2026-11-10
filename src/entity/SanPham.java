@@ -53,10 +53,10 @@ public class SanPham {
     }
 
     /** Constructor tương thích dữ liệu mẫu và các gọi cũ */
-    public SanPham(String id, String sku, String ten, String danhMucId, String thuongHieu,
+    public SanPham(String sku, String ten, String danhMucId, String thuongHieu,
             BigDecimal donGia, int thoiGianBaoHanh, boolean trangThai, String moTa,
             String anhBase64, LocalDateTime taoLuc, LocalDateTime capNhatLuc) {
-        this.maSKU = (sku != null && !sku.trim().isEmpty()) ? sku.trim() : id;
+        this.maSKU = sku == null ? null : sku.trim();
         this.tenSP = ten;
         this.thuongHieu = thuongHieu;
         this.donGia = donGia != null ? donGia : BigDecimal.ZERO;
@@ -90,7 +90,10 @@ public class SanPham {
     public void setThoiGianBaoHanh(int thoiGianBaoHanh) { this.thoiGianBaoHanh = thoiGianBaoHanh; }
 
     public int getSlTon() { return slTon; }
-    public void setSlTon(int slTon) { this.slTon = Math.max(0, slTon); }
+    public void setSlTon(int slTon) {
+        if (slTon < 0) throw new IllegalArgumentException("Tồn kho không được âm.");
+        this.slTon = slTon;
+    }
 
     public String getModel() { return model; }
     public void setModel(String model) { this.model = model; }
@@ -111,9 +114,6 @@ public class SanPham {
     public void setKhuyenMai(KhuyenMai khuyenMai) { this.khuyenMai = khuyenMai; }
 
     // --- Aliases thuận tiện cho mã nghiệp vụ & UI ---
-
-    public String getId() { return maSKU; }
-    public void setId(String id) { this.maSKU = id; }
 
     public String getSku() { return maSKU; }
     public void setSku(String sku) { this.maSKU = sku; }

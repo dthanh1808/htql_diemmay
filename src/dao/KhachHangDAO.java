@@ -48,7 +48,7 @@ public class KhachHangDAO {
         kh.setNhanKhuyenMai(rs.getBoolean("nhanKhuyenMai"));
         Timestamp created = rs.getTimestamp("ngayTao");
         Timestamp updated = rs.getTimestamp("ngayCapNhat");
-        if (created != null) kh.setTaoLuc(created.toLocalDateTime());
+        kh.setTaoLuc(created == null ? null : created.toLocalDateTime());
         if (updated != null) kh.setCapNhatLuc(updated.toLocalDateTime());
         return kh;
     }
@@ -106,26 +106,19 @@ public class KhachHangDAO {
         return null;
     }
 
-    /** Tạo mã khách hàng tiếp theo tự động từ CSDL */
-    public synchronized String taoMaKhachHang() {
-        int maxIndex = 0;
-        try (Connection conn = ConnectDB.openConnection();
-             PreparedStatement ps = conn.prepareStatement(
-                     "SELECT maKH FROM KhachHang WHERE maKH LIKE 'KH%'");
+    /** Mã KH do SQL Server cấp, an toàn giữa các máy và không tái sử dụng mã đã xóa. */
+    public String taoMaKhachHang() {
+        try (Connection conn = ConnectDB.openConnection()) {
+            return taoMaKhachHang(conn);
+        } catch (SQLException e) { throw new IllegalStateException("Không thể cấp mã khách hàng.", e); }
+    }
+
+    private String taoMaKhachHang(Connection conn) throws SQLException {
+        try (PreparedStatement ps = conn.prepareStatement("SELECT NEXT VALUE FOR dbo.SeqMaKhachHang");
              ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                String id = rs.getString(1);
-                try {
-                    int num = Integer.parseInt(id.substring(2));
-                    if (num > maxIndex) maxIndex = num;
-                } catch (Exception ignored) {}
-            }
-        } catch (SQLException e) {
-            throw new IllegalStateException("Không thể tạo mã khách hàng từ cơ sở dữ liệu.", e);
+            rs.next();
+            return String.format(Locale.ROOT, "KH%03d", rs.getLong(1));
         }
-        String ma = String.format(Locale.ROOT, "KH%03d", maxIndex + 1);
-        if (ma.length() > 10) throw new IllegalStateException("Đã hết mã khách hàng có thể tạo.");
-        return ma;
     }
 
     /** Thêm khách hàng mới */
@@ -135,14 +128,8 @@ public class KhachHangDAO {
         kiemTra(kh, true);
         kh.setHangTV(hangTheoChiTieu(kh.getTongChiTieuTichLuyDecimal()));
 
-        if (kh.getMaKH() == null || kh.getMaKH().trim().isEmpty()) {
-            kh.setMaKH(taoMaKhachHang());
-        }
-        if (kh.getMaKH().trim().length() > 10) {
-            throw new IllegalArgumentException("Mã khách hàng tối đa 10 ký tự.");
-        }
-
         try (Connection conn = ConnectDB.openConnection()) {
+            kh.setMaKH(taoMaKhachHang(conn));
             // Kiểm tra số điện thoại duy nhất
             try (PreparedStatement check = conn.prepareStatement("SELECT 1 FROM KhachHang WHERE sdt = ?")) {
                 check.setString(1, kh.getSdt());
@@ -300,9 +287,9 @@ public class KhachHangDAO {
                     }
                 }
             }
-            try (PreparedStatement ps = conn.prepareStatement("DELETE FROM KhachHang WHERE maKH = ?")) {
+            try (PreparedStatement ps = conn.prepareStatement("DELETE FROM KhachHang WHERE maKH = ? AND trangThai = 0")) {
                 ps.setString(1, ma);
-                ps.executeUpdate();
+                if (ps.executeUpdate() != 1) throw new IllegalArgumentException("Khách hàng đã được kích hoạt lại hoặc không còn tồn tại.");
             }
         } catch (SQLException e) {
             throw new IllegalArgumentException("Lỗi khi xóa khách hàng: " + e.getMessage());
@@ -318,6 +305,8 @@ public class KhachHangDAO {
         kh.setSdt(sdt);
         kh.setEmail(chuoi(kh.getEmail()).toLowerCase(Locale.ROOT));
         kh.setDiaChi(chuoi(kh.getDiaChi()));
+
+        kh.setGhiChu(kh.getGhiChu().trim());
 
         if (kh.getHoTen().length() < 2 || kh.getHoTen().length() > 100) {
             throw new IllegalArgumentException("Họ tên khách hàng phải có từ 2 đến 100 ký tự.");
@@ -374,7 +363,10 @@ public class KhachHangDAO {
 
     /** Lấy đối tượng HangThanhVien của khách hàng */
     public HangThanhVien layHang(String maKH) {
-        KhachHang kh = timTheoMa(maKH);
+        return layHang(timTheoMa(maKH));
+    }
+
+    public HangThanhVien layHang(KhachHang kh) {
         String tenHang = kh == null ? "Member" : hangTheoChiTieu(kh.getTongChiTieuTichLuyDecimal());
         for (HangThanhVien h : layChinhSach()) {
             if (h.getTen().equalsIgnoreCase(tenHang)) return h;
@@ -464,10 +456,14 @@ public class KhachHangDAO {
 
     /** Tìm kiếm và lọc khách hàng */
     public ArrayList<KhachHang> timKiem(String tuKhoa, String hang, Boolean hoatDong, LocalDate tuNgay, LocalDate denNgay) {
+        return timKiem(layTatCa(), tuKhoa, hang, hoatDong, tuNgay, denNgay);
+    }
+
+    public ArrayList<KhachHang> timKiem(java.util.List<KhachHang> tatCa, String tuKhoa, String hang, Boolean hoatDong, LocalDate tuNgay, LocalDate denNgay) {
         if (tuNgay != null && denNgay != null && tuNgay.isAfter(denNgay)) {
             throw new IllegalArgumentException("Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.");
         }
-        ArrayList<KhachHang> tatCa = layTatCa();
+
         ArrayList<KhachHang> ketQua = new ArrayList<>();
         String query = SanPhamDAO.chuanHoaTimKiem(chuoi(tuKhoa));
 
@@ -476,6 +472,7 @@ public class KhachHangDAO {
             if (hang != null && !hang.trim().isEmpty() && !hang.equalsIgnoreCase("Tất cả") &&
                     !hang.equalsIgnoreCase(kh.getHangTV())) continue;
 
+            if ((tuNgay != null || denNgay != null) && kh.getNgaySinh() == null) continue;
             if (kh.getNgaySinh() != null) {
                 if (tuNgay != null && kh.getNgaySinh().isBefore(tuNgay)) continue;
                 if (denNgay != null && kh.getNgaySinh().isAfter(denNgay)) continue;

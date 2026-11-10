@@ -1,4 +1,6 @@
-﻿IF DB_ID(N'QuanLyBanHang') IS NULL
+-- Script khởi tạo database mới. Database đang dùng chỉ chạy migration 04 để nâng cấp Sản Phẩm/Khách Hàng.
+-- Không chạy lại toàn bộ script khởi tạo trên database đã có bảng.
+IF DB_ID(N'QuanLyBanHang') IS NULL
     CREATE DATABASE QuanLyBanHang;
 GO
 USE QuanLyBanHang;
@@ -13,6 +15,9 @@ CREATE TABLE DanhMuc (
     moTa        NVARCHAR(255)  NULL,
     CONSTRAINT PK_DanhMuc PRIMARY KEY (maDanhMuc)
 );
+
+CREATE SEQUENCE dbo.SeqMaDanhMuc AS BIGINT START WITH 7 INCREMENT BY 1 MINVALUE 1 MAXVALUE 99999999 NO CYCLE;
+CREATE UNIQUE INDEX UX_DanhMuc_ten ON dbo.DanhMuc(tenDanhMuc);
 
 /* ==========================================================
    2. KHUYẾN MÃI
@@ -161,6 +166,8 @@ CREATE TABLE KhachHang (
     CONSTRAINT CK_KH_tctl          CHECK (tongChiTieuTichLuy >= 0),
     CONSTRAINT CK_KH_hangTV        CHECK (hangTV IN (N'Member', N'Silver', N'Gold', N'Diamond'))
 );
+
+CREATE SEQUENCE dbo.SeqMaKhachHang AS BIGINT START WITH 11 INCREMENT BY 1 MINVALUE 1 MAXVALUE 99999999 NO CYCLE;
 
 CREATE TABLE LichSuKhachHang (
     maLichSu  BIGINT IDENTITY(1,1) NOT NULL,
@@ -413,22 +420,8 @@ GO
 USE QuanLyBanHang;
 GO
 
--- Xóa dữ liệu cũ theo thứ tự ngược lại của khóa ngoại để tránh xung đột
-DELETE FROM PhieuBaoHanh;
-DELETE FROM GiaoDichTraGop;
-DELETE FROM ChiTietHoaDon;
-DELETE FROM HoaDon;
-DELETE FROM LichLamViec;
-DELETE FROM TaiKhoan;
-DELETE FROM NhanVien;
-DELETE FROM CaLamViec;
-DELETE FROM DanhMucCa;
-DELETE FROM SanPham;
-DELETE FROM KhuyenMai;
-DELETE FROM KhachHang;
-DELETE FROM DanhMuc;
-GO
-
+-- Dữ liệu mẫu dành cho database mới, không xóa dữ liệu đang có.
+-- Database đang dùng: chỉ chạy 04_DieuChinhSanPhamKhachHang.sql để nâng cấp hai mục.
 /* ==========================================================
    1. DANH MỤC SẢN PHẨM (6 dòng)
    ========================================================== */

@@ -15,6 +15,7 @@ import java.util.Locale;
 import java.util.Map;
 import dao.DuLieuTam;
 import dao.SanPhamDAO;
+import dao.DanhMucDAO;
 import entity.DanhMuc;
 import entity.KhuyenMai;
 import entity.SanPham;
@@ -27,7 +28,10 @@ import javax.swing.table.TableCellRenderer;
 
 public class PNL_SanPham extends JPanel {
 
+    private final SanPhamKhachHangWorker database = new SanPhamKhachHangWorker(this, e -> message(e.getMessage(), false));
+    private int listRequest;
     private final SanPhamDAO sanPhamDAO;
+    private final DanhMucDAO danhMucDAO = new DanhMucDAO();
     private final CardLayout viewLayout = new CardLayout();
     private final JPanel views = new JPanel(viewLayout);
     private final JLabel notice = new JLabel();
@@ -413,10 +417,10 @@ public class PNL_SanPham extends JPanel {
                 SanPham product = (SanPham) value;
                 lines = new String[]{product.getTen(), "SKU: " + product.getSku()};
                 if (thumbnail != null) {
-                    Icon icon = thumbnails.get(product.getId());
+                    Icon icon = thumbnails.get(product.getMaSKU());
                     if (icon == null) {
                         icon = productImage(product, 32);
-                        thumbnails.put(product.getId(), icon);
+                        thumbnails.put(product.getMaSKU(), icon);
                     }
                     thumbnail.setIcon(icon);
                 }
@@ -501,7 +505,7 @@ public class PNL_SanPham extends JPanel {
     private JTable createTable(Object[][] data, String[] columns, int[] widths, int moneyColumn) {
         JTable table = new JTable(new DefaultTableModel(data, columns)) {
             @Override
-            public boolean isCellEditable(int row, int column) { return column == 6; }
+            public boolean isCellEditable(int row, int column) { return "Thao tác".equals(getColumnName(column)); }
 
             @Override
             public boolean getScrollableTracksViewportWidth() {
@@ -659,19 +663,19 @@ public class PNL_SanPham extends JPanel {
             @Override public void mouseClicked(MouseEvent e) {
                 int row = productTable.rowAtPoint(e.getPoint());
                 int column = productTable.columnAtPoint(e.getPoint());
-                if (e.getClickCount() == 2 && row >= 0 && column != 7) showDetails(productAt(row).getId());
+                if (e.getClickCount() == 2 && row >= 0 && column != 7) showDetails(productAt(row).getMaSKU());
             }
         });
         productTable.getInputMap().put(KeyStroke.getKeyStroke("ENTER"), "viewProduct");
         productTable.getActionMap().put("viewProduct", new AbstractAction() {
             @Override public void actionPerformed(ActionEvent e) {
-                if (productTable.getSelectedRow() >= 0) showDetails(productAt(productTable.getSelectedRow()).getId());
+                if (productTable.getSelectedRow() >= 0) showDetails(productAt(productTable.getSelectedRow()).getMaSKU());
             }
         });
         productTable.getInputMap().put(KeyStroke.getKeyStroke("F2"), "editProduct");
         productTable.getActionMap().put("editProduct", new AbstractAction() {
             @Override public void actionPerformed(ActionEvent e) {
-                if (productTable.getSelectedRow() >= 0) showEditor(productAt(productTable.getSelectedRow()).getId());
+                if (productTable.getSelectedRow() >= 0) showEditor(productAt(productTable.getSelectedRow()).getMaSKU());
             }
         });
 
@@ -720,7 +724,7 @@ public class PNL_SanPham extends JPanel {
 
     private class ProductActionEditor extends AbstractCellEditor implements TableCellEditor {
         private final JPanel panel = new JPanel(new GridBagLayout());
-        private String id;
+        private String maSKU;
         ProductActionEditor() {
             JPanel buttons = new JPanel(new FlowLayout(FlowLayout.CENTER, 4, 0));
             buttons.setOpaque(false);
@@ -729,13 +733,13 @@ public class PNL_SanPham extends JPanel {
                 button.setBorder(new EmptyBorder(0, 5, 0, 5));
                 buttons.add(button);
             }
-            view.addActionListener(e -> { String chosen = id; fireEditingStopped(); showDetails(chosen); });
-            edit.addActionListener(e -> { String chosen = id; fireEditingStopped(); showEditor(chosen); });
+            view.addActionListener(e -> { String chosen = maSKU; fireEditingStopped(); showDetails(chosen); });
+            edit.addActionListener(e -> { String chosen = maSKU; fireEditingStopped(); showEditor(chosen); });
             panel.add(buttons);
         }
         @Override public Object getCellEditorValue() { return ""; }
         @Override public Component getTableCellEditorComponent(JTable table, Object value, boolean selected, int row, int column) {
-            id = productAt(row).getId(); panel.setBackground(selectionColor); return panel;
+            maSKU = productAt(row).getMaSKU(); panel.setBackground(selectionColor); return panel;
         }
     }
 
@@ -762,31 +766,34 @@ public class PNL_SanPham extends JPanel {
         return footer;
     }
 
+    private record Choices(ArrayList<DanhMuc> categories, ArrayList<String> brands, ArrayList<Integer> warranties) { }
     private void refreshChoices() {
-        String category = appliedFilter.danhMucId;
-        String brand = appliedFilter.thuongHieu;
-        categoryFilter.removeAllItems();
-        categoryFilter.addItem(new DanhMuc(null, "Tất cả", ""));
-        for (DanhMuc c : sanPhamDAO.layDanhSachDanhMuc()) categoryFilter.addItem(c);
-        selectCategory(categoryFilter, category);
-        brandFilter.removeAllItems(); brandFilter.addItem("Tất cả");
-        for (String value : sanPhamDAO.layThuongHieu()) brandFilter.addItem(value);
-        if (brand != null && sanPhamDAO.layThuongHieu().contains(brand)) brandFilter.setSelectedItem(brand);
-        warrantyFilter.removeAllItems(); warrantyFilter.addItem("Tất cả");
-        List<Integer> months = new ArrayList<>(sanPhamDAO.layBaoHanh());
-        for (int value : new int[]{0, 12, 24, 36}) if (!months.contains(value)) months.add(value);
-        java.util.Collections.sort(months);
-        for (int value : months) warrantyFilter.addItem(warranty(value));
-        if (appliedFilter.baoHanhThang != null) warrantyFilter.setSelectedItem(warranty(appliedFilter.baoHanhThang));
-        searchInput.setText(appliedFilter.tuKhoa);
-        priceFilter.setSelectedIndex(appliedFilter.khoangGia);
-        statusFilter.setSelectedIndex(appliedFilter.dangKinhDoanh == null ? 0 : appliedFilter.dangKinhDoanh ? 1 : 2);
-        appliedFilter = readFilters();
+        database.run(() -> new Choices(danhMucDAO.layTatCa(), sanPhamDAO.layThuongHieu(), sanPhamDAO.layBaoHanh()), choices -> {
+            String category = appliedFilter.danhMucId;
+            String brand = appliedFilter.thuongHieu;
+            categoryFilter.removeAllItems();
+            categoryFilter.addItem(new DanhMuc(null, "Tất cả", ""));
+            for (DanhMuc c : choices.categories()) categoryFilter.addItem(c);
+            selectCategory(categoryFilter, category);
+            brandFilter.removeAllItems(); brandFilter.addItem("Tất cả");
+            for (String value : choices.brands()) brandFilter.addItem(value);
+            if (brand != null && choices.brands().contains(brand)) brandFilter.setSelectedItem(brand);
+            warrantyFilter.removeAllItems(); warrantyFilter.addItem("Tất cả");
+            List<Integer> months = new ArrayList<>(choices.warranties());
+            for (int value : new int[]{0, 12, 24, 36}) if (!months.contains(value)) months.add(value);
+            java.util.Collections.sort(months);
+            for (int value : months) warrantyFilter.addItem(warranty(value));
+            if (appliedFilter.baoHanhThang != null) warrantyFilter.setSelectedItem(warranty(appliedFilter.baoHanhThang));
+            searchInput.setText(appliedFilter.tuKhoa);
+            priceFilter.setSelectedIndex(appliedFilter.khoangGia);
+            statusFilter.setSelectedIndex(appliedFilter.dangKinhDoanh == null ? 0 : appliedFilter.dangKinhDoanh ? 1 : 2);
+            appliedFilter = readFilters();
+        });
     }
 
-    private void selectCategory(JComboBox<DanhMuc> combo, String id) {
+    private void selectCategory(JComboBox<DanhMuc> combo, String maDanhMuc) {
         for (int i = 0; i < combo.getItemCount(); i++) {
-            if (java.util.Objects.equals(combo.getItemAt(i).getMaDM(), id)) { combo.setSelectedIndex(i); return; }
+            if (java.util.Objects.equals(combo.getItemAt(i).getMaDM(), maDanhMuc)) { combo.setSelectedIndex(i); return; }
         }
         if (combo.getItemCount() > 0) combo.setSelectedIndex(0);
     }
@@ -821,32 +828,43 @@ public class PNL_SanPham extends JPanel {
         refreshList();
     }
 
+    private record ProductRows(ArrayList<SanPham> rows, int total) { }
     private void refreshList() {
         if (productTable == null || pageSizeInput == null) return;
         if (productTable.isEditing()) productTable.getCellEditor().cancelCellEditing();
-        ArrayList<SanPham> ketQua = sanPhamDAO.timKiem(appliedFilter.tuKhoa, appliedFilter.danhMucId,
-                appliedFilter.thuongHieu, appliedFilter.khoangGia, appliedFilter.baoHanhThang, appliedFilter.dangKinhDoanh);
-        sanPhamDAO.sapXep(ketQua, sortInput.getSelectedIndex());
-        int size = (Integer) pageSizeInput.getSelectedItem();
-        int soTrang = Math.max(1, (ketQua.size() + size - 1) / size);
-        page = Math.max(1, Math.min(page, soTrang));
-        int batDau = (page - 1) * size;
-        int ketThuc = Math.min(batDau + size, ketQua.size());
-        productModel.setRowCount(0);
-        for (int i = batDau; i < ketThuc; i++) {
-            SanPham sp = ketQua.get(i);
-            productModel.addRow(new Object[]{sp, sanPhamDAO.layTenDanhMuc(sp.getDanhMucId()), sp.getThuongHieu(),
-                    money(sp.getGiaBan()), warranty(sp.getBaoHanhThang()), sp.getSlTon(),
-                    sp.isDangKinhDoanh() ? "Đang kinh doanh" : "Ngừng kinh doanh", ""});
-        }
-        listCount.setText(ketQua.size() + " kết quả / " + sanPhamDAO.layTatCa().size() + " sản phẩm");
-        pageInfo.setText("Hiển thị " + (ketQua.isEmpty() ? 0 : batDau + 1) + "–" + ketThuc + " trong " + ketQua.size() + " kết quả");
-        pageNumber.setText("Trang " + page + " / " + soTrang);
-        previousPage.setEnabled(page > 1);
-        nextPage.setEnabled(page < soTrang);
-        resultsLayout.show(results, ketQua.isEmpty() ? "empty" : "table");
-        revalidate();
-        repaint();
+        BoLoc loc = appliedFilter;
+        int order = sortInput.getSelectedIndex();
+        int request = ++listRequest;
+        database.run(() -> {
+            ArrayList<SanPham> all = sanPhamDAO.layTatCa();
+            ArrayList<SanPham> rows = sanPhamDAO.timKiem(all, loc.tuKhoa, loc.danhMucId, loc.thuongHieu,
+                    loc.khoangGia, loc.baoHanhThang, loc.dangKinhDoanh);
+            sanPhamDAO.sapXep(rows, order);
+            return new ProductRows(rows, all.size());
+        }, snapshot -> {
+            if (request != listRequest) return;
+            ArrayList<SanPham> ketQua = snapshot.rows();
+            int size = (Integer) pageSizeInput.getSelectedItem();
+            int soTrang = Math.max(1, (ketQua.size() + size - 1) / size);
+            page = Math.max(1, Math.min(page, soTrang));
+            int batDau = (page - 1) * size;
+            int ketThuc = Math.min(batDau + size, ketQua.size());
+            productModel.setRowCount(0);
+            for (int i = batDau; i < ketThuc; i++) {
+                SanPham sp = ketQua.get(i);
+                productModel.addRow(new Object[]{sp, sp.getTenDanhMuc(), sp.getThuongHieu(),
+                        money(sp.getGiaBan()), warranty(sp.getBaoHanhThang()), sp.getSlTon(),
+                        sp.isDangKinhDoanh() ? "Đang kinh doanh" : "Ngừng kinh doanh", ""});
+            }
+            listCount.setText(ketQua.size() + " kết quả / " + snapshot.total() + " sản phẩm");
+            pageInfo.setText("Hiển thị " + (ketQua.isEmpty() ? 0 : batDau + 1) + "–" + ketThuc + " trong " + ketQua.size() + " kết quả");
+            pageNumber.setText("Trang " + page + " / " + soTrang);
+            previousPage.setEnabled(page > 1);
+            nextPage.setEnabled(page < soTrang);
+            resultsLayout.show(results, ketQua.isEmpty() ? "empty" : "table");
+            revalidate();
+            repaint();
+        });
     }
 
     private void showList() { clearMessage(); refreshList(); viewLayout.show(views, "list"); }
@@ -907,14 +925,17 @@ public class PNL_SanPham extends JPanel {
         return text;
     }
 
-    private void showDetails(String id) {
-        SanPham p = sanPhamDAO.timTheoMa(id);
+    private void showDetails(String maSKU) {
+        database.run(() -> sanPhamDAO.timTheoMa(maSKU), p -> renderDetails(maSKU, p));
+    }
+
+    private void renderDetails(String maSKU, SanPham p) {
         if (p == null) { showList(); message("Sản phẩm không còn tồn tại.", false); return; }
         clearMessage();
         JPanel form = new JPanel(new GridBagLayout()); form.setOpaque(false);
         detailItem(form, "Tên sản phẩm", p.getTen(), 0, 0, 2);
         detailItem(form, "SKU", p.getSku(), 0, 1, 1);
-        detailItem(form, "Danh mục", sanPhamDAO.layTenDanhMuc(p.getDanhMucId()), 1, 1, 1);
+        detailItem(form, "Danh mục", p.getTenDanhMuc(), 1, 1, 1);
         detailItem(form, "Mã vạch", p.getMaVach(), 0, 2, 1);
         detailItem(form, "Model", p.getModel(), 1, 2, 1);
         detailItem(form, "Thương hiệu", p.getThuongHieu(), 0, 3, 1);
@@ -928,8 +949,8 @@ public class PNL_SanPham extends JPanel {
         formItem(form, "Mô tả / thông số kỹ thuật", textArea(moTa == null || moTa.isBlank() ? "Chưa có mô tả." : moTa, false), 0, 7, 2, 110);
         JButton back = createButton("Về danh sách", null, 0), edit = createButton("Chỉnh sửa", "/icon/ic_chinhsua.png", 1);
         JButton receive = createButton("Nhập kho", null, 0);
-        back.addActionListener(e -> showList()); edit.addActionListener(e -> showEditor(id));
-        receive.addActionListener(e -> perform(() -> receiveStock(id)));
+        back.addActionListener(e -> showList()); edit.addActionListener(e -> showEditor(maSKU));
+        receive.addActionListener(e -> perform(() -> receiveStock(maSKU)));
         install("detail", pageBody("Chi tiết sản phẩm", p.getSku(), form, back, edit, receive));
     }
 
@@ -941,10 +962,10 @@ public class PNL_SanPham extends JPanel {
         int quantity;
         try { quantity = Integer.parseInt(normalized); }
         catch (NumberFormatException e) { throw new IllegalArgumentException("Số lượng vượt giới hạn."); }
-        SanPham updated = sanPhamDAO.nhapKho(sku, quantity);
-        refreshList();
-        showDetails(updated.getMaSKU());
-        message("Đã nhập " + quantity + " sản phẩm. Tồn kho hiện tại: " + updated.getSlTon() + ".", true);
+        database.run(() -> sanPhamDAO.nhapKho(sku, quantity), updated -> {
+            renderDetails(updated.getMaSKU(), updated);
+            message("Đã nhập " + quantity + " sản phẩm. Tồn kho hiện tại: " + updated.getSlTon() + ".", true);
+        });
     }
 
     private void detailItem(JPanel form, String label, String value, int x, int y, int span) {
@@ -952,21 +973,16 @@ public class PNL_SanPham extends JPanel {
         formItem(form, label, field, x, y, span, 34);
     }
 
-private void showEditor(String id) {
-        if (sanPhamDAO.layDanhSachDanhMuc().isEmpty()) {
-            showCategories(null);
-            message("Hãy tạo ít nhất một danh mục trước khi thêm sản phẩm.", false);
-            return;
-        }
-        if (id != null && sanPhamDAO.timTheoMa(id) == null) {
-            showList();
-            message("Sản phẩm không còn tồn tại.", false);
-            return;
-        }
-        clearMessage();
-        SanPhamForm form = new SanPhamForm(id);
-        install("editor", form);
-        form.ten.requestFocusInWindow();
+    private record ProductFormData(SanPham product, ArrayList<DanhMuc> categories, ArrayList<KhuyenMai> promotions) { }
+    private void showEditor(String maSKU) {
+        database.run(() -> new ProductFormData(sanPhamDAO.timTheoMa(maSKU), danhMucDAO.layTatCa(), sanPhamDAO.layDanhSachKhuyenMai()), data -> {
+            if (data.categories().isEmpty()) { showCategories(null); message("Hãy tạo danh mục trước khi thêm sản phẩm.", false); return; }
+            if (maSKU != null && data.product() == null) { message("Sản phẩm không còn tồn tại.", false); return; }
+            clearMessage();
+            SanPhamForm form = new SanPhamForm(data);
+            install("editor", form);
+            form.ten.requestFocusInWindow();
+        });
     }
 
     /** Form có các thuộc tính và phương thức riêng, không dùng mảng để giữ trạng thái. */
@@ -987,13 +1003,13 @@ private void showEditor(String id) {
         private final JTextArea moTa = textArea("", true);
         private ArrayList<String> noiDungBanDau;
 
-        SanPhamForm(String id) {
+        SanPhamForm(ProductFormData data) {
             super(new BorderLayout());
             setOpaque(false);
-            banGoc = sanPhamDAO.timTheoMa(id);
-            for (DanhMuc dm : sanPhamDAO.layDanhSachDanhMuc()) danhMuc.addItem(dm);
+            banGoc = data.product();
+            for (DanhMuc dm : data.categories()) danhMuc.addItem(dm);
             khuyenMai.addItem(null); // Sản phẩm có thể không áp dụng khuyến mãi.
-            for (KhuyenMai km : sanPhamDAO.layDanhSachKhuyenMai()) khuyenMai.addItem(km);
+            for (KhuyenMai km : data.promotions()) khuyenMai.addItem(km);
             khuyenMai.setRenderer(new DefaultListCellRenderer() {
                 @Override public Component getListCellRendererComponent(JList<?> list, Object value, int index,
                         boolean selected, boolean focus) {
@@ -1048,7 +1064,7 @@ private void showEditor(String id) {
             nut.add(luu);
             if (banGoc != null) {
                 JButton xoa = createButton("Xóa sản phẩm", "/icon/ic_xoa.png", 2);
-                xoa.setEnabled(!banGoc.isDangKinhDoanh());
+                xoa.setEnabled(!banGoc.isDangKinhDoanh() && banGoc.getSlTon() == 0);
                 xoa.addActionListener(e -> xoa());
                 nut.add(xoa);
                 JLabel huongDan = new JLabel("<html>Để xóa, hãy chọn <b>Ngừng kinh doanh</b> và lưu sản phẩm trước. Có thể kích hoạt lại bằng cách chỉnh sửa trạng thái.</html>");
@@ -1102,20 +1118,20 @@ private void showEditor(String id) {
             noiDung.add((String) nhomSP.getSelectedItem());
             noiDung.add(((JSpinner.DefaultEditor) baoHanh.getEditor()).getTextField().getText());
             noiDung.add(String.valueOf(trangThai.getSelectedIndex()));
-            noiDung.add(String.valueOf(tonKho.getValue()));
+            noiDung.add(((JSpinner.DefaultEditor) tonKho.getEditor()).getTextField().getText());
             noiDung.add(moTa.getText());
             return noiDung;
         }
 
         private void luu() {
-            try { baoHanh.commitEdit(); }
-            catch (java.text.ParseException e) { throw new IllegalArgumentException("Bảo hành phải là số nguyên từ 0 đến 120 tháng."); }
+            try { baoHanh.commitEdit(); if (banGoc == null) tonKho.commitEdit(); }
+            catch (java.text.ParseException e) { throw new IllegalArgumentException("Bảo hành hoặc tồn kho không hợp lệ. Vui lòng nhập số nguyên trong giới hạn."); }
             if (!gia.getText().trim().matches("[0-9]{1,18}")) {
                 throw new IllegalArgumentException("Giá bán phải là số nguyên VND, không có dấu phân cách, tối đa 18 chữ số.");
             }
             DanhMuc dm = (DanhMuc) danhMuc.getSelectedItem();
             SanPham sp = new SanPham();
-            if (banGoc != null) sp.setId(banGoc.getId());
+            if (banGoc != null) sp.setMaSKU(banGoc.getMaSKU());
             sp.setSku(sku.getText());
             sp.setMaVach(maVach.getText().trim().isEmpty() ? null : maVach.getText().trim());
             sp.setTen(ten.getText());
@@ -1131,19 +1147,17 @@ private void showEditor(String id) {
             sp.setNhomSP((String) nhomSP.getSelectedItem());
             if (banGoc == null) sp.setSlTon(((Number) tonKho.getValue()).intValue());
 
-            SanPham daLuu;
-            if (banGoc == null) daLuu = sanPhamDAO.them(sp);
-            else daLuu = sanPhamDAO.capNhat(sp);
-            thumbnails.remove(daLuu.getId());
-            refreshChoices();
-            refreshList();
-            showDetails(daLuu.getId());
-            message("Đã lưu sản phẩm " + daLuu.getSku() + ".", true);
+            database.run(() -> banGoc == null ? sanPhamDAO.them(sp) : sanPhamDAO.capNhat(sp), daLuu -> {
+                thumbnails.remove(daLuu.getMaSKU());
+                refreshChoices();
+                renderDetails(daLuu.getMaSKU(), daLuu);
+                message("Đã lưu sản phẩm " + daLuu.getMaSKU() + ".", true);
+            });
         }
 
         private void quayLai() {
             if (banGoc == null) showList();
-            else showDetails(banGoc.getId());
+            else showDetails(banGoc.getMaSKU());
         }
 
         private void huy() {
@@ -1156,11 +1170,11 @@ private void showEditor(String id) {
             confirm("Xóa sản phẩm " + banGoc.getSku() + "?",
                     "Sản phẩm sẽ bị xóa khỏi danh sách hiện tại. Nếu chỉ tạm dừng bán, hãy giữ trạng thái Ngừng kinh doanh.",
                     "Xóa sản phẩm", () -> perform(() -> {
-                        sanPhamDAO.xoa(banGoc.getId());
-                        thumbnails.remove(banGoc.getId());
-                        refreshChoices();
-                        showList();
-                        message("Đã xóa sản phẩm " + banGoc.getSku() + ".", true);
+                        database.run(() -> { sanPhamDAO.xoa(banGoc.getMaSKU()); return true; }, ignored -> {
+                            thumbnails.remove(banGoc.getMaSKU());
+                            refreshChoices(); showList();
+                            message("Đã xóa sản phẩm " + banGoc.getMaSKU() + ".", true);
+                        });
                     }), () -> viewLayout.show(views, "editor"));
         }
 
@@ -1182,13 +1196,19 @@ private void showEditor(String id) {
 
     private void showCategories(String selectedId) {
         clearMessage();
-        install("categories", new DanhMucPanel(selectedId));
+        database.run(() -> {
+            ArrayList<DanhMuc> categories = danhMucDAO.layTatCa();
+            Map<String, Integer> counts = danhMucDAO.demTheoDanhMuc();
+            return new CategoryData(categories, counts);
+        }, data -> install("categories", new DanhMucPanel(selectedId, data)));
     }
 
+    private record CategoryData(ArrayList<DanhMuc> categories, Map<String, Integer> counts) { }
     private class DanhMucPanel extends JPanel {
-        private final ArrayList<DanhMuc> danhSach = sanPhamDAO.layDanhSachDanhMuc();
+        private final ArrayList<DanhMuc> danhSach;
+        private final Map<String, Integer> counts;
         private final JTable table;
-        private final JTextField ten = createInput("Tên danh mục, tối đa 80 ký tự");
+        private final JTextField ten = createInput("Tên danh mục, tối đa 100 ký tự");
         private final JTextArea moTa = textArea("", true);
         private final JLabel cheDo = new JLabel("Thêm danh mục");
         private final JLabel suDung = new JLabel("Danh mục mới chưa có sản phẩm.");
@@ -1199,13 +1219,14 @@ private void showEditor(String id) {
         private int dongTruoc = -1;
         private boolean dangChon;
 
-        DanhMucPanel(String selectedId) {
+        DanhMucPanel(String selectedId, CategoryData data) {
             super(new BorderLayout());
+            danhSach = data.categories(); counts = data.counts();
             setOpaque(false);
             Object[][] rows = new Object[danhSach.size()][3];
             for (int i = 0; i < danhSach.size(); i++) {
                 DanhMuc dm = danhSach.get(i);
-                rows[i] = new Object[]{dm.getTenDM(), sanPhamDAO.demSanPhamTheoDanhMuc(dm.getMaDM()), dm.getMoTa()};
+                rows[i] = new Object[]{dm.getTenDM(), counts.getOrDefault(dm.getMaDM(), 0), dm.getMoTa()};
             }
             table = createTable(rows, new String[]{"Danh mục", "Số sản phẩm", "Mô tả"}, new int[]{145, 110, 150}, 1);
             table.setName("category.table");
@@ -1275,7 +1296,7 @@ private void showEditor(String id) {
             tenBanDau = dm.getTenDM();
             moTaBanDau = dm.getMoTa();
             cheDo.setText("Chỉnh sửa danh mục");
-            int soLuong = sanPhamDAO.demSanPhamTheoDanhMuc(dm.getMaDM());
+            int soLuong = counts.getOrDefault(dm.getMaDM(), 0);
             suDung.setText("<html>" + soLuong + " sản phẩm. "
                     + (soLuong == 0 ? "Có thể xóa danh mục trống." : "Không thể xóa khi còn sản phẩm.") + "</html>");
             xoa.setEnabled(soLuong == 0);
@@ -1301,24 +1322,21 @@ private void showEditor(String id) {
 
         private void luu() {
             DanhMuc dm = new DanhMuc(maDangSua, ten.getText(), moTa.getText());
-            DanhMuc daLuu;
-            if (maDangSua == null) daLuu = sanPhamDAO.themDanhMuc(dm);
-            else daLuu = sanPhamDAO.capNhatDanhMuc(dm);
-            refreshChoices();
-            refreshList();
-            showCategories(daLuu.getMaDM());
-            message("Đã lưu danh mục " + daLuu.getTenDM() + ".", true);
+            database.run(() -> maDangSua == null ? danhMucDAO.them(dm) : danhMucDAO.capNhat(dm), daLuu -> {
+                refreshChoices(); refreshList(); showCategories(daLuu.getMaDM());
+                message("Đã lưu danh mục " + daLuu.getTenDM() + ".", true);
+            });
         }
 
         private void xoa() {
             if (maDangSua == null) return;
             confirm("Xóa danh mục?", "Chỉ xóa danh mục không chứa sản phẩm.", "Xóa danh mục",
                     () -> perform(() -> {
-                        sanPhamDAO.xoaDanhMuc(maDangSua);
-                        refreshChoices();
-                        refreshList();
-                        showCategories(null);
-                        message("Đã xóa danh mục.", true);
+                        String code = maDangSua;
+                        database.run(() -> { danhMucDAO.xoa(code); return true; }, ignored -> {
+                            refreshChoices(); refreshList(); showCategories(null);
+                            message("Đã xóa danh mục.", true);
+                        });
                     }), () -> viewLayout.show(views, "categories"));
         }
 

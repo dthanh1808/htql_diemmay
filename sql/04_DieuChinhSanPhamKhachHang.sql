@@ -6,6 +6,7 @@
 USE QuanLyBanHang;
 GO
 SET XACT_ABORT ON;
+BEGIN TRY
 BEGIN TRANSACTION;
 
 IF COL_LENGTH('dbo.SanPham', 'slTon') IS NULL
@@ -13,7 +14,7 @@ IF COL_LENGTH('dbo.SanPham', 'slTon') IS NULL
         CONSTRAINT DF_SP_slTon DEFAULT 0 WITH VALUES;
 IF NOT EXISTS (SELECT 1 FROM sys.check_constraints
                WHERE parent_object_id = OBJECT_ID('dbo.SanPham') AND name = 'CK_SP_slTon')
-    ALTER TABLE dbo.SanPham ADD CONSTRAINT CK_SP_slTon CHECK (slTon >= 0);
+    EXEC(N'ALTER TABLE dbo.SanPham ADD CONSTRAINT CK_SP_slTon CHECK (slTon >= 0);');
 
 IF EXISTS (SELECT 1 FROM sys.key_constraints
            WHERE parent_object_id = OBJECT_ID('dbo.SanPham') AND name = 'UQ_SP_maVach')
@@ -36,14 +37,39 @@ IF NOT EXISTS (SELECT 1 FROM sys.default_constraints
 UPDATE dbo.SanPham SET nhomSanPham = N'Gọn nhẹ' WHERE nhomSanPham IS NULL;
 ALTER TABLE dbo.SanPham ALTER COLUMN nhomSanPham NVARCHAR(100) NOT NULL;
 
+-- Chặn tên danh mục trùng ở tầng database, kể cả khi hai máy lưu đồng thời.
+IF EXISTS (SELECT tenDanhMuc FROM dbo.DanhMuc GROUP BY tenDanhMuc HAVING COUNT(*) > 1)
+BEGIN
+    THROW 51002, N'Có tên danh mục trùng. Cần hợp nhất hoặc đổi tên trước khi chạy migration.', 1;
+END;
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID('dbo.DanhMuc') AND name = 'UX_DanhMuc_ten')
+    CREATE UNIQUE INDEX UX_DanhMuc_ten ON dbo.DanhMuc(tenDanhMuc);
+
+-- Chỉ cấp mã mới; không hạ sequence khi chạy lại migration.
+DECLARE @nextCategory BIGINT = (SELECT COALESCE(MAX(TRY_CONVERT(BIGINT, SUBSTRING(maDanhMuc,3,20))),0)+1 FROM dbo.DanhMuc WHERE maDanhMuc LIKE 'DM%');
+DECLARE @nextCustomer BIGINT = (SELECT COALESCE(MAX(TRY_CONVERT(BIGINT, SUBSTRING(maKH,3,20))),0)+1 FROM dbo.KhachHang WHERE maKH LIKE 'KH%');
+DECLARE @sequenceDdl NVARCHAR(MAX);
+IF OBJECT_ID('dbo.SeqMaDanhMuc', 'SO') IS NULL
+BEGIN
+    SET @sequenceDdl = N'CREATE SEQUENCE dbo.SeqMaDanhMuc AS BIGINT START WITH ' + CAST(@nextCategory AS NVARCHAR(20)) + N' INCREMENT BY 1 MINVALUE 1 MAXVALUE 99999999 NO CYCLE;';
+    EXEC sys.sp_executesql @sequenceDdl;
+END;
+IF OBJECT_ID('dbo.SeqMaKhachHang', 'SO') IS NULL
+BEGIN
+    SET @sequenceDdl = N'CREATE SEQUENCE dbo.SeqMaKhachHang AS BIGINT START WITH ' + CAST(@nextCustomer AS NVARCHAR(20)) + N' INCREMENT BY 1 MINVALUE 1 MAXVALUE 99999999 NO CYCLE;';
+    EXEC sys.sp_executesql @sequenceDdl;
+END;
+
 IF COL_LENGTH('dbo.KhachHang', 'ghiChu') IS NULL
     ALTER TABLE dbo.KhachHang ADD ghiChu NVARCHAR(500) NULL;
 IF COL_LENGTH('dbo.KhachHang', 'nhanKhuyenMai') IS NULL
     ALTER TABLE dbo.KhachHang ADD nhanKhuyenMai BIT NOT NULL
         CONSTRAINT DF_KH_nhanKM DEFAULT 0 WITH VALUES;
 IF COL_LENGTH('dbo.KhachHang', 'ngayTao') IS NULL
-    ALTER TABLE dbo.KhachHang ADD ngayTao DATETIME2(0) NOT NULL
-        CONSTRAINT DF_KH_ngayTao DEFAULT SYSDATETIME() WITH VALUES;
+    ALTER TABLE dbo.KhachHang ADD ngayTao DATETIME2(0) NULL;
+-- Ngày tạo hồ sơ cũ không thể suy ra từ lúc chạy migration.
+IF NOT EXISTS (SELECT 1 FROM sys.default_constraints WHERE parent_object_id = OBJECT_ID('dbo.KhachHang') AND parent_column_id = COLUMNPROPERTY(OBJECT_ID('dbo.KhachHang'), 'ngayTao', 'ColumnId'))
+    ALTER TABLE dbo.KhachHang ADD CONSTRAINT DF_KH_ngayTao DEFAULT SYSDATETIME() FOR ngayTao;
 IF COL_LENGTH('dbo.KhachHang', 'ngayCapNhat') IS NULL
     ALTER TABLE dbo.KhachHang ADD ngayCapNhat DATETIME2(0) NOT NULL
         CONSTRAINT DF_KH_ngayCapNhat DEFAULT SYSDATETIME() WITH VALUES;
@@ -136,4 +162,9 @@ WHERE hangTV <> CASE
     END;
 
 COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF XACT_STATE() <> 0 ROLLBACK;
+    THROW;
+END CATCH;
 GO

@@ -276,6 +276,8 @@ public class SanPhamDAO {
             throw new IllegalArgumentException("Hãy chuyển sang trạng thái 'Ngừng kinh doanh' trước khi xóa.");
         }
 
+        if (sp.getSlTon() != 0) throw new IllegalArgumentException("Chỉ xóa sản phẩm khi tồn kho bằng 0.");
+
         try (Connection conn = ConnectDB.openConnection()) {
             // Kiểm tra ràng buộc khóa ngoại ChiTietHoaDon
             try (PreparedStatement check = conn.prepareStatement("SELECT COUNT(*) FROM ChiTietHoaDon WHERE maSKU = ?")) {
@@ -299,9 +301,9 @@ public class SanPhamDAO {
                 }
             }
 
-            try (PreparedStatement ps = conn.prepareStatement("DELETE FROM SanPham WHERE maSKU = ?")) {
+            try (PreparedStatement ps = conn.prepareStatement("DELETE FROM SanPham WHERE maSKU = ? AND trangThai = 0 AND slTon = 0")) {
                 ps.setString(1, sku);
-                ps.executeUpdate();
+                if (ps.executeUpdate() != 1) throw new IllegalArgumentException("Sản phẩm đã thay đổi trạng thái hoặc tồn kho. Hãy tải lại.");
             }
         } catch (SQLException e) {
             throw new IllegalArgumentException("Lỗi khi xóa sản phẩm: " + e.getMessage());
@@ -340,6 +342,7 @@ public class SanPhamDAO {
         if (sp.getDanhMuc() == null || sp.getDanhMuc().getMaDM() == null || sp.getDanhMuc().getMaDM().trim().isEmpty()) {
             throw new IllegalArgumentException("Vui lòng chọn danh mục cho sản phẩm.");
         }
+        if (sp.getMaVach() != null && sp.getMaVach().isBlank()) sp.setMaVach(null);
         if (sp.getMaKM() != null) {
             sp.setMaKM(sp.getMaKM().trim());
             if (sp.getMaKM().isEmpty()) sp.setMaKM(null);
@@ -355,7 +358,7 @@ public class SanPhamDAO {
         if (gia == null || gia.compareTo(BigDecimal.ZERO) <= 0 || gia.compareTo(new BigDecimal("999999999999999999")) > 0) {
             throw new IllegalArgumentException("Đơn giá bán phải lớn hơn 0 và tối đa 999.999.999.999.999.999 đ.");
         }
-        sp.setDonGia(gia.setScale(0, BigDecimal.ROUND_HALF_UP));
+        sp.setDonGia(gia.setScale(0, java.math.RoundingMode.HALF_UP));
 
         if (sp.getThoiGianBaoHanh() < 0 || sp.getThoiGianBaoHanh() > 120) {
             throw new IllegalArgumentException("Thời gian bảo hành phải từ 0 đến 120 tháng.");
@@ -402,136 +405,6 @@ public class SanPhamDAO {
         }
     }
 
-    /** Lấy toàn bộ danh mục từ CSDL */
-    public ArrayList<DanhMuc> layDanhSachDanhMuc() {
-        ArrayList<DanhMuc> ds = new ArrayList<>();
-        try (Connection conn = ConnectDB.openConnection();
-             PreparedStatement ps = conn.prepareStatement("SELECT maDanhMuc, tenDanhMuc, moTa FROM DanhMuc ORDER BY maDanhMuc");
-             ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                ds.add(new DanhMuc(rs.getString("maDanhMuc"), rs.getString("tenDanhMuc"), rs.getString("moTa")));
-            }
-            return ds;
-        } catch (SQLException e) {
-            throw new IllegalStateException("Không thể tải danh sách danh mục.", e);
-        }
-    }
-
-    public String layTenDanhMuc(String maDanhMuc) {
-        if (maDanhMuc == null || maDanhMuc.isBlank()) return "";
-        try (Connection conn = ConnectDB.openConnection();
-             PreparedStatement ps = conn.prepareStatement("SELECT tenDanhMuc FROM DanhMuc WHERE maDanhMuc = ?")) {
-            ps.setString(1, maDanhMuc.trim());
-            try (ResultSet rs = ps.executeQuery()) {
-                return rs.next() ? rs.getString(1) : "";
-            }
-        } catch (SQLException e) {
-            throw new IllegalStateException("Không thể đọc tên danh mục sản phẩm.", e);
-        }
-    }
-
-    public int demSanPhamTheoDanhMuc(String maDanhMuc) {
-        try (Connection conn = ConnectDB.openConnection();
-             PreparedStatement ps = conn.prepareStatement("SELECT COUNT(*) FROM SanPham WHERE maDanhMuc = ?")) {
-            ps.setString(1, maDanhMuc);
-            try (ResultSet rs = ps.executeQuery()) {
-                return rs.next() ? rs.getInt(1) : 0;
-            }
-        } catch (SQLException e) {
-            throw new IllegalStateException("Không thể đếm sản phẩm trong danh mục.", e);
-        }
-    }
-
-    public DanhMuc themDanhMuc(DanhMuc input) {
-        DanhMuc dm = kiemTraDanhMuc(input);
-        try (Connection conn = ConnectDB.openConnection()) {
-            try (PreparedStatement check = conn.prepareStatement(
-                    "SELECT 1 FROM DanhMuc WHERE LOWER(tenDanhMuc) = LOWER(?)")) {
-                check.setString(1, dm.getTenDM());
-                try (ResultSet rs = check.executeQuery()) {
-                    if (rs.next()) throw new IllegalArgumentException("Tên danh mục đã tồn tại.");
-                }
-            }
-            dm.setMaDM(taoMaDanhMuc(conn));
-            try (PreparedStatement ps = conn.prepareStatement(
-                    "INSERT INTO DanhMuc (maDanhMuc, tenDanhMuc, moTa) VALUES (?, ?, ?)")) {
-                ps.setString(1, dm.getMaDM());
-                ps.setString(2, dm.getTenDM());
-                ps.setString(3, dm.getMoTa().isEmpty() ? null : dm.getMoTa());
-                ps.executeUpdate();
-            }
-            return dm;
-        } catch (SQLException e) {
-            throw new IllegalStateException("Không thể thêm danh mục sản phẩm.", e);
-        }
-    }
-
-    public DanhMuc capNhatDanhMuc(DanhMuc input) {
-        DanhMuc dm = kiemTraDanhMuc(input);
-        if (dm.getMaDM() == null || dm.getMaDM().isBlank())
-            throw new IllegalArgumentException("Mã danh mục không được để trống.");
-        try (Connection conn = ConnectDB.openConnection()) {
-            try (PreparedStatement check = conn.prepareStatement(
-                    "SELECT 1 FROM DanhMuc WHERE LOWER(tenDanhMuc) = LOWER(?) AND maDanhMuc <> ?")) {
-                check.setString(1, dm.getTenDM());
-                check.setString(2, dm.getMaDM());
-                try (ResultSet rs = check.executeQuery()) {
-                    if (rs.next()) throw new IllegalArgumentException("Tên danh mục đã tồn tại.");
-                }
-            }
-            try (PreparedStatement ps = conn.prepareStatement(
-                    "UPDATE DanhMuc SET tenDanhMuc = ?, moTa = ? WHERE maDanhMuc = ?")) {
-                ps.setString(1, dm.getTenDM());
-                ps.setString(2, dm.getMoTa().isEmpty() ? null : dm.getMoTa());
-                ps.setString(3, dm.getMaDM());
-                if (ps.executeUpdate() == 0) throw new IllegalArgumentException("Danh mục không còn tồn tại.");
-            }
-            return dm;
-        } catch (SQLException e) {
-            throw new IllegalStateException("Không thể cập nhật danh mục sản phẩm.", e);
-        }
-    }
-
-    public void xoaDanhMuc(String maDanhMuc) {
-        if (maDanhMuc == null || maDanhMuc.isBlank()) throw new IllegalArgumentException("Chưa chọn danh mục.");
-        if (demSanPhamTheoDanhMuc(maDanhMuc) > 0)
-            throw new IllegalArgumentException("Không thể xóa danh mục đang được sản phẩm sử dụng.");
-        try (Connection conn = ConnectDB.openConnection();
-             PreparedStatement ps = conn.prepareStatement("DELETE FROM DanhMuc WHERE maDanhMuc = ?")) {
-            if (ps.executeUpdate() == 0) throw new IllegalArgumentException("Danh mục không còn tồn tại.");
-        } catch (SQLException e) {
-            throw new IllegalStateException("Không thể xóa danh mục sản phẩm.", e);
-        }
-    }
-
-    private DanhMuc kiemTraDanhMuc(DanhMuc input) {
-        if (input == null) throw new IllegalArgumentException("Chưa nhập danh mục.");
-        DanhMuc dm = new DanhMuc(input);
-        dm.setTenDM(donGianHoa(dm.getTenDM()));
-        dm.setMoTa(dm.getMoTa() == null ? "" : dm.getMoTa().trim());
-        if (dm.getTenDM().length() < 2 || dm.getTenDM().length() > 100)
-            throw new IllegalArgumentException("Tên danh mục phải có từ 2 đến 100 ký tự.");
-        if (dm.getMoTa().length() > 255)
-            throw new IllegalArgumentException("Mô tả danh mục tối đa 255 ký tự.");
-        return dm;
-    }
-
-    private String taoMaDanhMuc(Connection conn) throws SQLException {
-        int max = 0;
-        try (PreparedStatement ps = conn.prepareStatement(
-                "SELECT maDanhMuc FROM DanhMuc WHERE maDanhMuc LIKE 'DM%'" );
-             ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                String id = rs.getString(1);
-                try { max = Math.max(max, Integer.parseInt(id.substring(2))); }
-                catch (NumberFormatException ignored) { }
-            }
-        }
-        String code = String.format(Locale.ROOT, "DM%02d", max + 1);
-        if (code.length() > 10) throw new IllegalStateException("Đã hết mã danh mục có thể tạo.");
-        return code;
-    }
-
     /** Lấy toàn bộ khuyến mãi từ CSDL */
     public ArrayList<KhuyenMai> layDanhSachKhuyenMai() {
         ArrayList<KhuyenMai> ds = new ArrayList<>();
@@ -558,7 +431,12 @@ public class SanPhamDAO {
      */
     public ArrayList<SanPham> timKiem(String tuKhoa, String danhMucId, String thuongHieu,
             int khoangGia, Integer baoHanh, Boolean dangKinhDoanh) {
-        ArrayList<SanPham> tatCa = layTatCa();
+        return timKiem(layTatCa(), tuKhoa, danhMucId, thuongHieu, khoangGia, baoHanh, dangKinhDoanh);
+    }
+
+    public ArrayList<SanPham> timKiem(java.util.List<SanPham> tatCa, String tuKhoa, String danhMucId, String thuongHieu,
+            int khoangGia, Integer baoHanh, Boolean dangKinhDoanh) {
+
         ArrayList<SanPham> ketQua = new ArrayList<>();
         String query = chuanHoaTimKiem(tuKhoa);
 

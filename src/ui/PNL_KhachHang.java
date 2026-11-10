@@ -516,6 +516,8 @@ public class PNL_KhachHang extends JPanel {
     }
 
 
+    private final SanPhamKhachHangWorker database = new SanPhamKhachHangWorker(this, e -> message(e.getMessage(), false));
+    private int listRequest;
     private final KhachHangDAO dao;
     private final CardLayout cards = new CardLayout();
     private final JPanel content = new JPanel(cards);
@@ -697,26 +699,46 @@ public class PNL_KhachHang extends JPanel {
     private void resetFilters() {
         search.setText(""); fromDate.setText(""); toDate.setText(""); rankFilter.setSelectedIndex(0); statusFilter.setSelectedIndex(0); applyFilters();
     }
+    private record CustomerRows(ArrayList<KhachHang> rows, int total) { }
     private void refreshList() {
         if (model == null) return;
         if (table.isEditing()) table.getCellEditor().cancelCellEditing();
-        filtered = dao.timKiem(keyword, rank, active, from, to); dao.sapXep(filtered, sort.getSelectedIndex());
-        int size = Integer.parseInt((String) pageSize.getSelectedItem()); int pages = Math.max(1, (filtered.size() + size - 1) / size);
-        page = Math.min(Math.max(1, page), pages); int start = (page - 1) * size, end = Math.min(start + size, filtered.size());
-        model.setRowCount(0);
-        for (int i = start; i < end; i++) {
-            KhachHang kh = filtered.get(i);
-            model.addRow(new Object[]{new String[]{kh.getHoTen(), kh.getId()}, new String[]{kh.getSoDienThoai(), valueOrEmpty(kh.getEmail()).isBlank() ? "Chưa có email" : kh.getEmail()},
-                    dao.layHang(kh.getId()).getTen(), money(dao.tongChiTieu(kh.getId())),
-                    kh.getNgaySinh() == null ? "Chưa cung cấp" : dateFormat.format(kh.getNgaySinh()),
-                    kh.isDangHoatDong() ? "Đang hoạt động" : "Ngừng hoạt động", ""});
-        }
-        summary.setText(filtered.size() + " kết quả / " + dao.layTatCa().size() + " khách hàng");
-        pageInfo.setText("Hiển thị " + (filtered.isEmpty() ? 0 : start + 1) + "–" + end + "/" + filtered.size() + " · Trang " + page + "/" + pages);
-        previous.setEnabled(page > 1); next.setEnabled(page < pages); empty.setVisible(filtered.isEmpty());
+        String searchValue = keyword, rankValue = rank;
+        Boolean activeValue = active;
+        LocalDate fromValue = from, toValue = to;
+        int order = sort.getSelectedIndex(), request = ++listRequest;
+        database.run(() -> {
+            ArrayList<KhachHang> all = dao.layTatCa();
+            ArrayList<KhachHang> rows = dao.timKiem(all, searchValue, rankValue, activeValue, fromValue, toValue);
+            dao.sapXep(rows, order);
+            return new CustomerRows(rows, all.size());
+        }, snapshot -> {
+            if (request != listRequest) return;
+            filtered = snapshot.rows();
+            int size = Integer.parseInt((String) pageSize.getSelectedItem()); int pages = Math.max(1, (filtered.size() + size - 1) / size);
+            page = Math.min(Math.max(1, page), pages); int start = (page - 1) * size, end = Math.min(start + size, filtered.size());
+            model.setRowCount(0);
+            for (int i = start; i < end; i++) {
+                KhachHang kh = filtered.get(i);
+                model.addRow(new Object[]{new String[]{kh.getHoTen(), kh.getMaKH()}, new String[]{kh.getSoDienThoai(), valueOrEmpty(kh.getEmail()).isBlank() ? "Chưa có email" : kh.getEmail()},
+                        dao.layHang(kh).getTen(), money(kh.getTongChiTieu()),
+                        kh.getNgaySinh() == null ? "Chưa cung cấp" : dateFormat.format(kh.getNgaySinh()),
+                        kh.isDangHoatDong() ? "Đang hoạt động" : "Ngừng hoạt động", ""});
+            }
+            summary.setText(filtered.size() + " kết quả / " + snapshot.total() + " khách hàng");
+            pageInfo.setText("Hiển thị " + (filtered.isEmpty() ? 0 : start + 1) + "–" + end + "/" + filtered.size() + " · Trang " + page + "/" + pages);
+            previous.setEnabled(page > 1); next.setEnabled(page < pages); empty.setVisible(filtered.isEmpty());
+        });
     }
     private void backToList() { refreshList(); showView("list"); }
-    private void editor(String id) { install("editor", new CustomerForm(id)); }
+    private record CustomerFormData(KhachHang customer, boolean canDelete) { }
+    private void editor(String maKH) {
+        database.run(() -> {
+            KhachHang customer = maKH == null ? null : dao.timTheoMa(maKH);
+            if (maKH != null && customer == null) throw new IllegalArgumentException("Khách hàng không còn tồn tại.");
+            return new CustomerFormData(customer, customer != null && dao.coTheXoa(maKH));
+        }, data -> install("editor", new CustomerForm(data)));
+    }
 
     private class CustomerForm extends JPanel {
         private final KhachHang original;
@@ -726,10 +748,9 @@ public class PNL_KhachHang extends JPanel {
         private final JComboBox<String> state;
         private final JComboBox<String> gender;
         private boolean dirty;
-        CustomerForm(String id) {
+        CustomerForm(CustomerFormData data) {
             super(new BorderLayout()); setOpaque(false);
-            original = id == null ? null : dao.timTheoMa(id);
-            if (id != null && original == null) throw new IllegalArgumentException("Khách hàng không còn tồn tại.");
+            original = data.customer();
             name = input("customer.form.name", original == null ? "" : original.getHoTen());
             phone = input("customer.form.phone", original == null ? "" : original.getSoDienThoai());
             email = input("customer.form.email", original == null ? "" : valueOrEmpty(original.getEmail()));
@@ -753,9 +774,9 @@ public class PNL_KhachHang extends JPanel {
             if (original != null) field(form, r++, "Trạng thái", state);
             field(form, r, "Lưu ý", label("<html>Chi tiêu và hạng được tính từ giao dịch, không sửa trực tiếp tại hồ sơ.</html>"));
             JButton delete = button("Xóa khách hàng", 2, this::delete);
-            delete.setEnabled(original != null && dao.coTheXoa(original.getId()));
+            delete.setEnabled(data.canDelete());
             delete.setToolTipText("Chỉ xóa khách đã ngừng hoạt động, chưa có hóa đơn hoặc phiếu bảo hành.");
-            add(view(original == null ? "Đăng ký khách hàng" : "Chỉnh sửa khách hàng · " + original.getId(), scroll(form), actions(
+            add(view(original == null ? "Đăng ký khách hàng" : "Chỉnh sửa khách hàng · " + original.getMaKH(), scroll(form), actions(
                     button("Lưu khách hàng", 1, this::save), button("Hủy / Quay lại", 0, this::cancel), delete)));
             for (JTextField f : new JTextField[]{name, phone, email, address, birthday}) watch(f, () -> dirty = true);
             notes.getDocument().addDocumentListener(listener(() -> dirty = true));
@@ -769,22 +790,32 @@ public class PNL_KhachHang extends JPanel {
             kh.setGioiTinh(gender.getSelectedIndex() == 0 ? null : gender.getSelectedIndex() == 1);
             kh.setGhiChu(notes.getText()); kh.setNhanKhuyenMai(promotionalConsent.isSelected());
             kh.setDangHoatDong(state.getSelectedIndex() == 0);
-            KhachHang saved = original == null ? dao.them(kh) : dao.capNhat(kh);
-            details(saved.getId(), false); message("Đã lưu khách hàng " + saved.getId() + ".", true);
+            database.run(() -> original == null ? dao.them(kh) : dao.capNhat(kh), saved -> {
+                details(saved.getMaKH(), false);
+                message("Đã lưu khách hàng " + saved.getMaKH() + ".", true);
+            });
         }
-        private void cancel() { discard(dirty, () -> { if (original == null) backToList(); else details(original.getId(), false); }, () -> showView("editor")); }
+        private void cancel() { discard(dirty, () -> { if (original == null) backToList(); else details(original.getMaKH(), false); }, () -> showView("editor")); }
         private void delete() {
             if (original == null) return;
-            confirm("Xóa khách hàng?", "Xóa vĩnh viễn hồ sơ " + original.getId() + " – " + original.getHoTen() + ". Không thể hoàn tác.", "Xóa khách hàng", 2,
-                    () -> { dao.xoa(original.getId()); backToList(); message("Đã xóa khách hàng.", true); }, () -> showView("editor"));
+            confirm("Xóa khách hàng?", "Xóa vĩnh viễn hồ sơ " + original.getMaKH() + " – " + original.getHoTen() + ". Không thể hoàn tác.", "Xóa khách hàng", 2,
+                    () -> database.run(() -> { dao.xoa(original.getMaKH()); return true; }, ignored -> { backToList(); message("Đã xóa khách hàng.", true); }), () -> showView("editor"));
         }
     }
 
-    private void details(String id, boolean history) {
-        KhachHang kh = dao.timTheoMa(id);
-        if (kh == null) throw new IllegalArgumentException("Khách hàng không còn tồn tại.");
+    private record CustomerDetail(KhachHang customer, ArrayList<GiaoDichKhachHang> transactions, ArrayList<LichSuKhachHang> events) { }
+    private void details(String maKH, boolean history) {
+        database.run(() -> {
+            KhachHang kh = dao.timTheoMa(maKH);
+            if (kh == null) throw new IllegalArgumentException("Khách hàng không còn tồn tại.");
+            return new CustomerDetail(kh, dao.layGiaoDich(maKH), dao.layLichSu(maKH));
+        }, data -> renderDetails(maKH, history, data));
+    }
+
+    private void renderDetails(String id, boolean history, CustomerDetail data) {
+        KhachHang kh = data.customer();
         JTabbedPane tabs = new JTabbedPane(); tabs.setFont(new Font("Segoe UI", Font.PLAIN, 13)); tabs.setName("customer.tabs");
-        FormPanel info = new FormPanel(); HangThanhVien hang = dao.layHang(id); BigDecimal total = dao.tongChiTieu(id);
+        FormPanel info = new FormPanel(); HangThanhVien hang = dao.layHang(kh); BigDecimal total = kh.getTongChiTieu();
         field(info, 0, "Thông tin liên hệ", label("<html>" + html(kh.getHoTen()) + "<br>" + html(kh.getSoDienThoai()) + "<br>" + html(valueOrEmpty(kh.getEmail())) + "<br>" + html(valueOrEmpty(kh.getDiaChi())) + "</html>"));
         field(info, 1, "Ngày sinh", label(kh.getNgaySinh() == null ? "Chưa cung cấp" : dateFormat.format(kh.getNgaySinh())));
         field(info, 2, "Giới tính", label(kh.getGioiTinhNullable() == null ? "Chưa cung cấp" : kh.isGioiTinh() ? "Nam" : "Nữ"));
@@ -794,31 +825,32 @@ public class PNL_KhachHang extends JPanel {
         for (HangThanhVien h : dao.layChinhSach()) if (h.getChiTieuToiThieu().compareTo(total) > 0) { progress = "Cần thêm " + money(h.getChiTieuToiThieu().subtract(total)) + " để đạt " + h.getTen() + "."; break; }
         field(info, 5, "Tiến độ thăng hạng", label(progress));
         field(info, 6, "Nhận thông tin khuyến mãi", label(kh.isNhanKhuyenMai() ? "Có đồng ý" : "Không đồng ý"));
-        field(info, 7, "Ngày tạo / cập nhật", label(timeFormat.format(kh.getTaoLuc()) + " / " + timeFormat.format(kh.getCapNhatLuc())));
+        field(info, 7, "Ngày tạo / cập nhật", label((kh.getTaoLuc() == null ? "Chưa có dữ liệu" : timeFormat.format(kh.getTaoLuc())) + " / " + timeFormat.format(kh.getCapNhatLuc())));
         String note = kh.getGhiChu().isBlank() ? "Chưa có" : "<html>" + html(kh.getGhiChu()).replace("\n", "<br>") + "</html>";
         field(info, 8, "Ghi chú", label(note));
         tabs.addTab("Hồ sơ", scroll(info));
-        ArrayList<GiaoDichKhachHang> transactions = dao.layGiaoDich(id); Object[][] rows = new Object[transactions.size()][4];
+        ArrayList<GiaoDichKhachHang> transactions = data.transactions(); Object[][] rows = new Object[transactions.size()][4];
         for (int i = 0; i < rows.length; i++) { GiaoDichKhachHang gd = transactions.get(i); rows[i] = new Object[]{gd.getMaHoaDon(), timeFormat.format(gd.getThoiGian()), money(gd.getSoTien()), gd.getNoiDung()}; }
-        JTable purchases = createTable(rows, new String[]{"Mã hóa đơn", "Thời gian", "Thực thanh toán", "Nội dung"}, new int[]{150, 165, 150, 400}, 2); purchases.setName("customer.transactions");
+        JTable purchases = createTable(rows, new String[]{"Mã hóa đơn", "Thời gian", "Giá trị hóa đơn", "Nội dung"}, new int[]{150, 165, 150, 400}, 2); purchases.setName("customer.transactions");
         JPanel spending = new JPanel(new BorderLayout(0, 8)); spending.setBackground(Color.WHITE);
-        spending.add(label(transactions.size() + " giao dịch · Tổng thực thanh toán: " + money(total)), BorderLayout.NORTH); spending.add(createScrollPane(purchases));
+        BigDecimal historyTotal = transactions.stream().map(GiaoDichKhachHang::getSoTien).reduce(BigDecimal.ZERO, BigDecimal::add);
+        spending.add(label(transactions.size() + " hóa đơn · Tổng giá trị hóa đơn: " + money(historyTotal)), BorderLayout.NORTH); spending.add(createScrollPane(purchases));
         tabs.addTab("Lịch sử mua hàng", spending);
-        ArrayList<LichSuKhachHang> events = dao.layLichSu(id); rows = new Object[events.size()][3];
+        ArrayList<LichSuKhachHang> events = data.events(); rows = new Object[events.size()][3];
         for (int i = 0; i < rows.length; i++) { LichSuKhachHang ls = events.get(i); rows[i] = new Object[]{timeFormat.format(ls.getThoiGian()), ls.getLoai(), ls.getNoiDung()}; }
         JTable audit = createTable(rows, new String[]{"Thời gian", "Hoạt động", "Nội dung"}, new int[]{165, 120, 650}, -1); audit.setName("customer.history");
         tabs.addTab("Lịch sử hoạt động", createScrollPane(audit));
         tabs.setSelectedIndex(history ? 2 : 0);
-        install("detail", view("Khách hàng · " + kh.getId(), tabs, actions(button("Về danh sách", 0, this::backToList), button("Chỉnh sửa", 1, () -> editor(id)))));
+        install("detail", view("Khách hàng · " + kh.getMaKH(), tabs, actions(button("Về danh sách", 0, this::backToList), button("Chỉnh sửa", 1, () -> editor(id)))));
     }
 
     /** Xuất toàn bộ kết quả đã áp dụng lọc, kể cả các trang chưa hiển thị. */
     public String taoCsv() {
         StringBuilder csv = new StringBuilder("Mã KH,Họ tên,Số điện thoại,Email,Địa chỉ,Ngày sinh,Hạng,Tổng chi tiêu,Trạng thái\r\n");
         for (KhachHang kh : filtered) {
-            String[] values = {kh.getId(), kh.getHoTen(), kh.getSoDienThoai(), valueOrEmpty(kh.getEmail()), valueOrEmpty(kh.getDiaChi()),
-                    kh.getNgaySinh() == null ? "" : dateFormat.format(kh.getNgaySinh()), dao.layHang(kh.getId()).getTen(),
-                    dao.tongChiTieu(kh.getId()).toPlainString(), kh.isDangHoatDong() ? "Đang hoạt động" : "Ngừng hoạt động"};
+            String[] values = {kh.getMaKH(), kh.getHoTen(), kh.getSoDienThoai(), valueOrEmpty(kh.getEmail()), valueOrEmpty(kh.getDiaChi()),
+                    kh.getNgaySinh() == null ? "" : dateFormat.format(kh.getNgaySinh()), dao.layHang(kh).getTen(),
+                    kh.getTongChiTieu().toPlainString(), kh.isDangHoatDong() ? "Đang hoạt động" : "Ngừng hoạt động"};
             for (int i = 0; i < values.length; i++) { if (i > 0) csv.append(','); String v = values[i];
                 if (v.stripLeading().matches("(?s)^[=+@-].*") || v.startsWith("\t") || v.startsWith("\r")) v = "'" + v;
                 csv.append('"').append(v.replace("\"", "\"\"")).append('"'); }

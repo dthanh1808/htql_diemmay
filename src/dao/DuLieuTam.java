@@ -10,7 +10,6 @@ public class DuLieuTam {
     private static final DuLieuTam MAC_DINH = new DuLieuTam();
     private final ArrayList<DanhMuc> danhMuc = new ArrayList<>();
     private final ArrayList<SanPham> sanPham = new ArrayList<>();
-    private int soSanPham = 1;
     private int soDanhMuc = 1;
     private final ArrayList<KhachHang> khachHang = new ArrayList<>();
     private final ArrayList<HangThanhVien> hangThanhVien = new ArrayList<>();
@@ -27,7 +26,6 @@ public class DuLieuTam {
     // Chỉ DAO trong cùng package được thay đổi dữ liệu trong các ArrayList.
     ArrayList<DanhMuc> getDanhMuc() { return danhMuc; }
     ArrayList<SanPham> getSanPham() { return sanPham; }
-    String taoMaSanPham() { return String.format("SP%04d", soSanPham++); }
     String taoMaDanhMuc() { return String.format("DM%03d", soDanhMuc++); }
     ArrayList<KhachHang> getKhachHang() { return khachHang; }
     ArrayList<HangThanhVien> getHangThanhVien() { return hangThanhVien; }
@@ -76,7 +74,7 @@ public class DuLieuTam {
             danhMuc.add(dm);
             String[] dong = duLieu[i];
             LocalDateTime bayGio = LocalDateTime.now();
-            sanPham.add(new SanPham(taoMaSanPham(), dong[0], dong[1], dm.getId(), dong[2],
+            sanPham.add(new SanPham(dong[0], dong[1], dm.getMaDM(), dong[2],
                     new BigDecimal(dong[3]), Integer.parseInt(dong[4]), i != 6, "", "", bayGio, bayGio));
         }
     }
