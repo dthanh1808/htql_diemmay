@@ -31,12 +31,28 @@ public class DanhMuc {
         this.maDanhMuc = maDanhMuc;
     }
 
+    public String getMaDM() {
+        return maDanhMuc;
+    }
+
+    public void setMaDM(String maDM) {
+        this.maDanhMuc = maDM;
+    }
+
     public String getTenDanhMuc() {
         return tenDanhMuc;
     }
 
     public void setTenDanhMuc(String tenDanhMuc) {
         this.tenDanhMuc = tenDanhMuc;
+    }
+
+    public String getTenDM() {
+        return tenDanhMuc;
+    }
+
+    public void setTenDM(String tenDM) {
+        this.tenDanhMuc = tenDM;
     }
 
     public String getMoTa() {

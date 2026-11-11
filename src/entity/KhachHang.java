@@ -81,6 +81,10 @@ public class KhachHang {
     public String getTenKH() { return tenKH; }
     public void setTenKH(String tenKH) { this.tenKH = tenKH; }
 
+    // Aliases hỗ trợ tương thích
+    public String getHoTen() { return tenKH; }
+    public void setHoTen(String hoTen) { this.tenKH = hoTen; }
+
     public String getSdt() { return sdt; }
     public void setSdt(String sdt) { this.sdt = sdt; }
 
@@ -103,6 +107,8 @@ public class KhachHang {
 
     public double getTongChiTieuTichLuy() { return tongChiTieuTichLuy.doubleValue(); }
     public BigDecimal getTongChiTieuTichLuyDecimal() { return tongChiTieuTichLuy; }
+    public BigDecimal getTongChiTieu() { return tongChiTieuTichLuy; }
+    public void setTongChiTieu(BigDecimal tongChiTieu) { setTongChiTieuTichLuy(tongChiTieu); }
     public void setTongChiTieuTichLuy(double tongChiTieuTichLuy) {
         this.tongChiTieuTichLuy = BigDecimal.valueOf(Math.max(0.0, tongChiTieuTichLuy))
                 .setScale(0, java.math.RoundingMode.HALF_UP);
@@ -123,9 +129,11 @@ public class KhachHang {
 
     public LocalDateTime getNgayTao() { return ngayTao; }
     public void setNgayTao(LocalDateTime ngayTao) { this.ngayTao = ngayTao; }
+    public LocalDateTime getTaoLuc() { return ngayTao; }
 
     public LocalDateTime getNgayCapNhat() { return ngayCapNhat != null ? ngayCapNhat : LocalDateTime.now(); }
     public void setNgayCapNhat(LocalDateTime ngayCapNhat) { this.ngayCapNhat = ngayCapNhat; }
+    public LocalDateTime getCapNhatLuc() { return getNgayCapNhat(); }
 
     // --- Phương thức hỗ trợ UI (Tuỳ chọn) ---
     public String getId() { return maKH; }

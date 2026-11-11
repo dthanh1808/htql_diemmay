@@ -57,7 +57,7 @@ public class KhachHangDAO {
     /** Lấy toàn bộ danh sách khách hàng */
     public ArrayList<KhachHang> layTatCa() {
         ArrayList<KhachHang> ketQua = new ArrayList<>();
-        try (Connection conn = ConnectDB.getConnection();
+        try (Connection conn = ConnectDB.openConnection();
              PreparedStatement ps = conn.prepareStatement(SELECT_BASE + " ORDER BY maKH");
              ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
@@ -73,7 +73,7 @@ public class KhachHangDAO {
     public KhachHang timTheoMa(String maKH) {
         if (maKH == null || maKH.trim().isEmpty()) return null;
         String ma = maKH.trim();
-        try (Connection conn = ConnectDB.getConnection();
+        try (Connection conn = ConnectDB.openConnection();
              PreparedStatement ps = conn.prepareStatement(SELECT_BASE + " WHERE maKH = ?")) {
             ps.setString(1, ma);
             try (ResultSet rs = ps.executeQuery()) {
@@ -93,7 +93,7 @@ public class KhachHangDAO {
         String p = sdt.trim().replaceAll("[ .()-]", "");
         if (p.startsWith("+84")) p = "0" + p.substring(3);
 
-        try (Connection conn = ConnectDB.getConnection();
+        try (Connection conn = ConnectDB.openConnection();
              PreparedStatement ps = conn.prepareStatement(SELECT_BASE + " WHERE sdt = ?")) {
             ps.setString(1, p);
             try (ResultSet rs = ps.executeQuery()) {
@@ -109,7 +109,7 @@ public class KhachHangDAO {
 
     /** Mã KH do SQL Server cấp, an toàn giữa các máy và không tái sử dụng mã đã xóa. */
     public String taoMaKhachHang() {
-        try (Connection conn = ConnectDB.getConnection()) {
+        try (Connection conn = ConnectDB.openConnection()) {
             return taoMaKhachHang(conn);
         } catch (SQLException e) { 
             throw new IllegalStateException("Không thể cấp mã khách hàng.", e); 
@@ -130,7 +130,7 @@ public class KhachHangDAO {
         KhachHang kh = new KhachHang(input);
         kiemTra(kh, true);
         
-        try (Connection conn = ConnectDB.getConnection()) {
+        try (Connection conn = ConnectDB.openConnection()) {
             kh.setMaKH(taoMaKhachHang(conn));
             
             // Kiểm tra số điện thoại duy nhất
@@ -180,7 +180,7 @@ public class KhachHangDAO {
         }
         kiemTra(kh, false);
 
-        try (Connection conn = ConnectDB.getConnection()) {
+        try (Connection conn = ConnectDB.openConnection()) {
             // Kiểm tra trùng SĐT với người khác
             try (PreparedStatement check = conn.prepareStatement("SELECT 1 FROM KhachHang WHERE sdt = ? AND maKH <> ?")) {
                 check.setString(1, kh.getSdt());
@@ -224,7 +224,7 @@ public class KhachHangDAO {
     /** Chuyển đổi trạng thái hoạt động của khách hàng */
     public void chuyenTrangThai(String maKH, boolean dangHoatDong) {
         if (maKH == null || maKH.trim().isEmpty()) return;
-        try (Connection conn = ConnectDB.getConnection();
+        try (Connection conn = ConnectDB.openConnection();
              PreparedStatement ps = conn.prepareStatement("UPDATE KhachHang SET trangThai = ? WHERE maKH = ?")) {
             ps.setBoolean(1, dangHoatDong);
             ps.setString(2, maKH.trim());
@@ -331,7 +331,7 @@ public class KhachHangDAO {
         if (maKH == null || soTienThem == null || soTienThem.compareTo(BigDecimal.ZERO) <= 0) return;
         BigDecimal tien = soTienThem.setScale(0, java.math.RoundingMode.HALF_UP);
         String sql = "UPDATE KhachHang SET tongChiTieuTichLuy = tongChiTieuTichLuy + ? WHERE maKH = ?";
-        try (Connection conn = ConnectDB.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (Connection conn = ConnectDB.openConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setBigDecimal(1, tien);
             ps.setString(2, maKH.trim());
             ps.executeUpdate();
@@ -345,7 +345,7 @@ public class KhachHangDAO {
         ArrayList<GiaoDichKhachHang> ds = new ArrayList<>();
         if (maKH == null || maKH.trim().isEmpty()) return ds;
 
-        try (Connection conn = ConnectDB.getConnection();
+        try (Connection conn = ConnectDB.openConnection();
              PreparedStatement ps = conn.prepareStatement(
                      "SELECT maHD, ngayLap, tongThanhToan, ghiChuGiaoHang, trangThai " +
                      "FROM HoaDon WHERE maKH = ? ORDER BY ngayLap DESC")) {
@@ -374,7 +374,7 @@ public class KhachHangDAO {
         if (maKH == null || maKH.trim().isEmpty()) return ds;
         String sql = "SELECT thoiGian, hanhDong, noiDung FROM LichSuKhachHang " +
                      "WHERE maKH = ? ORDER BY thoiGian DESC, maLichSu DESC";
-        try (Connection conn = ConnectDB.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (Connection conn = ConnectDB.openConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, maKH.trim());
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -436,6 +436,31 @@ public class KhachHangDAO {
             ketQua.add(kh);
         }
         return ketQua;
+    }
+
+    public boolean coTheXoa(String maKH) {
+        if (maKH == null || maKH.isBlank()) return false;
+        try (Connection conn = ConnectDB.openConnection();
+             PreparedStatement ps = conn.prepareStatement("SELECT COUNT(*) FROM HoaDon WHERE maKH = ?")) {
+            ps.setString(1, maKH.trim());
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() && rs.getInt(1) == 0;
+            }
+        } catch (SQLException e) {
+            return false;
+        }
+    }
+
+    public void xoa(String maKH) {
+        if (maKH == null || maKH.isBlank()) throw new IllegalArgumentException("Chưa chọn khách hàng cần xóa.");
+        if (!coTheXoa(maKH)) throw new IllegalArgumentException("Khách hàng đã có hóa đơn, không thể xóa.");
+        try (Connection conn = ConnectDB.openConnection();
+             PreparedStatement ps = conn.prepareStatement("DELETE FROM KhachHang WHERE maKH = ?")) {
+            ps.setString(1, maKH.trim());
+            if (ps.executeUpdate() == 0) throw new IllegalArgumentException("Khách hàng không còn tồn tại.");
+        } catch (SQLException e) {
+            throw new IllegalStateException("Không thể xóa khách hàng.", e);
+        }
     }
 
     /** Sắp xếp danh sách khách hàng */
