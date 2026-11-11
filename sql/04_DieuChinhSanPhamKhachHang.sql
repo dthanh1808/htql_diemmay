@@ -3,7 +3,7 @@
    Chạy sau QuanLyBanHang.sql và trước 03_DuLieuMau.sql nếu dùng schema cũ.
    Dữ liệu tồn kho cũ được đặt về 0 vì schema cũ không lưu số lượng.
 */
-/*USE QuanLyBanHang;
+USE QuanLyBanHang;
 GO
 SET XACT_ABORT ON;
 BEGIN TRY
@@ -15,6 +15,31 @@ IF COL_LENGTH('dbo.SanPham', 'slTon') IS NULL
 IF NOT EXISTS (SELECT 1 FROM sys.check_constraints
                WHERE parent_object_id = OBJECT_ID('dbo.SanPham') AND name = 'CK_SP_slTon')
     EXEC(N'ALTER TABLE dbo.SanPham ADD CONSTRAINT CK_SP_slTon CHECK (slTon >= 0);');
+
+-- Các cột được SanPhamDAO dùng khi lưu và đọc lại sản phẩm theo SKU.
+IF COL_LENGTH('dbo.SanPham', 'hinhAnh') IS NULL
+    ALTER TABLE dbo.SanPham ADD hinhAnh NVARCHAR(MAX) NULL;
+IF COL_LENGTH('dbo.SanPham', 'ngayTao') IS NULL
+    ALTER TABLE dbo.SanPham ADD ngayTao DATETIME2(0) NULL
+        CONSTRAINT DF_SP_ngayTao DEFAULT SYSDATETIME();
+IF COL_LENGTH('dbo.SanPham', 'ngayCapNhat') IS NULL
+    ALTER TABLE dbo.SanPham ADD ngayCapNhat DATETIME2(0) NULL
+        CONSTRAINT DF_SP_ngayCapNhat DEFAULT SYSDATETIME();
+
+EXEC(N'
+CREATE OR ALTER TRIGGER dbo.TRG_SP_CapNhatThoiGian
+ON dbo.SanPham
+AFTER UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF TRIGGER_NESTLEVEL(OBJECT_ID(N''dbo.TRG_SP_CapNhatThoiGian'')) > 1 RETURN;
+
+    UPDATE sp
+    SET ngayCapNhat = SYSDATETIME()
+    FROM dbo.SanPham sp
+    JOIN inserted i ON i.maSKU = sp.maSKU;
+END;');
 
 IF EXISTS (SELECT 1 FROM sys.key_constraints
            WHERE parent_object_id = OBJECT_ID('dbo.SanPham') AND name = 'UQ_SP_maVach')

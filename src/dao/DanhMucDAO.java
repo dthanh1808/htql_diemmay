@@ -6,145 +6,134 @@ import entity.DanhMuc;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 public class DanhMucDAO {
-    // Gọi class kết nối DB của bạn. 
-    // Nếu bị lỗi đỏ dòng này, hãy đổi thành: ConnectDB.getInstance().getConnection();
-    private Connection conn = ConnectDB.getConnection(); 
+    private static final String SELECT_COLUMNS = "SELECT maDanhMuc, tenDanhMuc, moTa FROM dbo.DanhMuc";
 
-    public DanhMucDAO() {
-    }
-
-    /**
-     * Lấy toàn bộ danh sách Danh Mục từ SQL (Đã đổi tên thành layTatCa cho khớp UI)
-     */
     public ArrayList<DanhMuc> layTatCa() {
         ArrayList<DanhMuc> list = new ArrayList<>();
-        String sql = "SELECT * FROM DanhMuc ORDER BY maDanhMuc"; 
-        
-        try (Statement st = conn.createStatement();
-             ResultSet rs = st.executeQuery(sql)) {
-            
-            while (rs.next()) {
-                DanhMuc dm = new DanhMuc();
-                dm.setMaDanhMuc(rs.getString("maDanhMuc"));
-                dm.setTenDanhMuc(rs.getString("tenDanhMuc"));
-                dm.setMoTa(rs.getString("moTa"));
-                list.add(dm);
-            }
+        try (Connection conn = ConnectDB.openConnection();
+             PreparedStatement ps = conn.prepareStatement(SELECT_COLUMNS + " ORDER BY maDanhMuc");
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) list.add(docDanhMuc(rs));
+            return list;
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new IllegalStateException("Không thể tải danh sách danh mục sản phẩm.", e);
         }
-        return list;
     }
 
-    /**
-     * Đếm số lượng sản phẩm theo từng danh mục
-     */
     public Map<String, Integer> demTheoDanhMuc() {
         Map<String, Integer> counts = new HashMap<>();
-        String sql = "SELECT maDanhMuc, COUNT(*) as soLuong FROM SanPham GROUP BY maDanhMuc";
-        
-        try (Statement st = conn.createStatement();
-             ResultSet rs = st.executeQuery(sql)) {
-            while (rs.next()) {
-                counts.put(rs.getString("maDanhMuc"), rs.getInt("soLuong"));
-            }
+        String sql = "SELECT maDanhMuc, COUNT(*) AS soLuong FROM dbo.SanPham GROUP BY maDanhMuc";
+        try (Connection conn = ConnectDB.openConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) counts.put(rs.getString("maDanhMuc"), rs.getInt("soLuong"));
+            return counts;
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new IllegalStateException("Không thể đếm sản phẩm trong danh mục.", e);
         }
-        return counts;
     }
 
-    /**
-     * Tìm danh mục theo Mã
-     */
     public DanhMuc getByMa(String maDanhMuc) {
-        String sql = "SELECT * FROM DanhMuc WHERE maDanhMuc = ?";
-        try (PreparedStatement pst = conn.prepareStatement(sql)) {
-            pst.setString(1, maDanhMuc);
-            try (ResultSet rs = pst.executeQuery()) {
-                if (rs.next()) {
-                    DanhMuc dm = new DanhMuc();
-                    dm.setMaDanhMuc(rs.getString("maDanhMuc"));
-                    dm.setTenDanhMuc(rs.getString("tenDanhMuc"));
-                    dm.setMoTa(rs.getString("moTa"));
-                    return dm;
-                }
+        if (maDanhMuc == null || maDanhMuc.isBlank()) return null;
+        try (Connection conn = ConnectDB.openConnection();
+             PreparedStatement ps = conn.prepareStatement(SELECT_COLUMNS + " WHERE maDanhMuc = ?")) {
+            ps.setString(1, maDanhMuc.trim());
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? docDanhMuc(rs) : null;
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new IllegalStateException("Không thể tải danh mục sản phẩm.", e);
         }
-        return null;
     }
 
-    /**
-     * Tự động sinh mã danh mục mới (Dùng Sequence trong SQL Server)
-     */
     public String phatSinhMaMoi() {
-        String sql = "SELECT NEXT VALUE FOR dbo.SeqMaDanhMuc";
-        try (Statement st = conn.createStatement();
-             ResultSet rs = st.executeQuery(sql)) {
-            if (rs.next()) {
-                return String.format("DM%02d", rs.getLong(1)); // Ví dụ: DM07
-            }
+        try (Connection conn = ConnectDB.openConnection()) {
+            return phatSinhMaMoi(conn);
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new IllegalStateException("Không thể cấp mã danh mục sản phẩm.", e);
         }
-        return null; 
     }
 
-    /**
-     * Thêm danh mục mới vào SQL (Trả về chính DanhMuc đó thay vì boolean)
-     */
     public DanhMuc themDanhMuc(DanhMuc dm) {
-        // Tự động sinh mã mới nếu chưa có
-        if (dm.getMaDanhMuc() == null || dm.getMaDanhMuc().isEmpty()) {
-            dm.setMaDanhMuc(phatSinhMaMoi());
-        }
-        
-        String sql = "INSERT INTO DanhMuc (maDanhMuc, tenDanhMuc, moTa) VALUES (?, ?, ?)";
-        try (PreparedStatement pst = conn.prepareStatement(sql)) {
-            pst.setString(1, dm.getMaDanhMuc());
-            pst.setString(2, dm.getTenDanhMuc());
-            pst.setString(3, dm.getMoTa());
-            pst.executeUpdate();
-            return dm; // Trả về đối tượng vừa lưu thành công
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-    /**
-     * Cập nhật thông tin danh mục theo Mã
-     */
-    public DanhMuc capNhatDanhMuc(DanhMuc dm) {
-        String sql = "UPDATE DanhMuc SET tenDanhMuc = ?, moTa = ? WHERE maDanhMuc = ?";
-        try (PreparedStatement pst = conn.prepareStatement(sql)) {
-            pst.setString(1, dm.getTenDanhMuc());
-            pst.setString(2, dm.getMoTa());
-            pst.setString(3, dm.getMaDanhMuc());
-            pst.executeUpdate();
+        kiemTra(dm);
+        String sql = "INSERT INTO dbo.DanhMuc (maDanhMuc, tenDanhMuc, moTa) VALUES (?, ?, ?)";
+        try (Connection conn = ConnectDB.openConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            if (dm.getMaDanhMuc() == null || dm.getMaDanhMuc().isBlank()) {
+                dm.setMaDanhMuc(phatSinhMaMoi(conn));
+            }
+            ps.setString(1, dm.getMaDanhMuc().trim());
+            ps.setNString(2, dm.getTenDanhMuc());
+            ps.setNString(3, dm.getMoTa());
+            ps.executeUpdate();
             return dm;
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw loiLuuDanhMuc(e);
         }
-        return null;
     }
 
-    /**
-     * Xóa danh mục theo Mã
-     */
-    public void xoa(String maDanhMuc) {
-        String sql = "DELETE FROM DanhMuc WHERE maDanhMuc = ?";
-        try (PreparedStatement pst = conn.prepareStatement(sql)) {
-            pst.setString(1, maDanhMuc);
-            pst.executeUpdate();
-        } catch (SQLException e) {
-            // Ném lỗi để UI (PNL_SanPham) bắt và hiển thị thông báo đỏ
-            throw new RuntimeException("Không thể xóa danh mục này do đang chứa sản phẩm!", e);
+    public DanhMuc capNhatDanhMuc(DanhMuc dm) {
+        kiemTra(dm);
+        if (dm.getMaDanhMuc() == null || dm.getMaDanhMuc().isBlank()) {
+            throw new IllegalArgumentException("Chưa chọn danh mục cần cập nhật.");
         }
+        String sql = "UPDATE dbo.DanhMuc SET tenDanhMuc = ?, moTa = ? WHERE maDanhMuc = ?";
+        try (Connection conn = ConnectDB.openConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setNString(1, dm.getTenDanhMuc());
+            ps.setNString(2, dm.getMoTa());
+            ps.setString(3, dm.getMaDanhMuc().trim());
+            if (ps.executeUpdate() == 0) throw new IllegalArgumentException("Danh mục không còn tồn tại.");
+            return dm;
+        } catch (SQLException e) {
+            throw loiLuuDanhMuc(e);
+        }
+    }
+
+    public void xoa(String maDanhMuc) {
+        if (maDanhMuc == null || maDanhMuc.isBlank()) throw new IllegalArgumentException("Chưa chọn danh mục cần xóa.");
+        try (Connection conn = ConnectDB.openConnection();
+             PreparedStatement ps = conn.prepareStatement("DELETE FROM dbo.DanhMuc WHERE maDanhMuc = ?")) {
+            ps.setString(1, maDanhMuc.trim());
+            if (ps.executeUpdate() == 0) throw new IllegalArgumentException("Danh mục không còn tồn tại.");
+        } catch (SQLException e) {
+            if (e.getErrorCode() == 547) {
+                throw new IllegalArgumentException("Danh mục đang được sản phẩm sử dụng.", e);
+            }
+            throw new IllegalStateException("Không thể xóa danh mục sản phẩm.", e);
+        }
+    }
+
+    private DanhMuc docDanhMuc(ResultSet rs) throws SQLException {
+        return new DanhMuc(rs.getString("maDanhMuc"), rs.getString("tenDanhMuc"), rs.getString("moTa"));
+    }
+
+    private String phatSinhMaMoi(Connection conn) throws SQLException {
+        try (PreparedStatement ps = conn.prepareStatement("SELECT NEXT VALUE FOR dbo.SeqMaDanhMuc");
+             ResultSet rs = ps.executeQuery()) {
+            if (!rs.next()) throw new SQLException("Sequence không trả về mã danh mục.");
+            return String.format(Locale.ROOT, "DM%02d", rs.getLong(1));
+        }
+    }
+
+    private void kiemTra(DanhMuc dm) {
+        if (dm == null) throw new IllegalArgumentException("Chưa nhập danh mục.");
+        String ten = dm.getTenDanhMuc() == null ? "" : dm.getTenDanhMuc().trim().replaceAll("\\s+", " ");
+        String moTa = dm.getMoTa() == null ? "" : dm.getMoTa().trim();
+        if (ten.length() < 2 || ten.length() > 100) throw new IllegalArgumentException("Tên danh mục phải có từ 2 đến 100 ký tự.");
+        if (moTa.length() > 255) throw new IllegalArgumentException("Mô tả danh mục tối đa 255 ký tự.");
+        dm.setTenDanhMuc(ten);
+        dm.setMoTa(moTa.isEmpty() ? null : moTa);
+    }
+
+    private RuntimeException loiLuuDanhMuc(SQLException e) {
+        if (e.getErrorCode() == 2601 || e.getErrorCode() == 2627) {
+            return new IllegalArgumentException("Mã hoặc tên danh mục đã tồn tại.", e);
+        }
+        return new IllegalStateException("Không thể lưu danh mục sản phẩm.", e);
     }
 }

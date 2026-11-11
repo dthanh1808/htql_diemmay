@@ -834,6 +834,11 @@ public class PNL_SanPham extends JPanel {
                 }
             });
             sku.setEditable(banGoc == null);
+            sku.setName("product.form.sku");
+            ten.setName("product.form.name");
+            thuongHieu.setName("product.form.brand");
+            gia.setName("product.form.price");
+            tonKho.setName("product.form.stock");
             gia.setHorizontalAlignment(SwingConstants.RIGHT);
             napDuLieu();
 
@@ -902,8 +907,17 @@ public class PNL_SanPham extends JPanel {
         }
 
         private void luu() {
-            try { baoHanh.commitEdit(); if (banGoc == null) tonKho.commitEdit(); } catch (Exception e) { }
-            SanPham sp = new SanPham();
+            try {
+                baoHanh.commitEdit();
+                if (banGoc == null) tonKho.commitEdit();
+            } catch (java.text.ParseException e) {
+                throw new IllegalArgumentException("Bảo hành hoặc tồn kho không hợp lệ. Vui lòng nhập số nguyên trong giới hạn.", e);
+            }
+            String giaNhap = gia.getText().trim();
+            if (!giaNhap.matches("[0-9]{1,18}")) {
+                throw new IllegalArgumentException("Giá bán phải là số nguyên VND, tối đa 18 chữ số.");
+            }
+            SanPham sp = banGoc == null ? new SanPham() : new SanPham(banGoc);
             if (banGoc != null) sp.setMaSKU(banGoc.getMaSKU());
             else sp.setMaSKU(sku.getText());
             
@@ -915,7 +929,7 @@ public class PNL_SanPham extends JPanel {
             KhuyenMai km = (KhuyenMai) khuyenMai.getSelectedItem();
             sp.setKhuyenMai(km);
             sp.setThuongHieu(thuongHieu.getText());
-            sp.setDonGia(new BigDecimal(gia.getText().trim()));
+            sp.setDonGia(new BigDecimal(giaNhap));
             sp.setThoiGianBaoHanh(((Number) baoHanh.getValue()).intValue());
             sp.setTrangThai(trangThai.getSelectedIndex() == 0);
             sp.setMoTa(moTa.getText());
@@ -923,7 +937,9 @@ public class PNL_SanPham extends JPanel {
             if (banGoc == null) sp.setSlTon(((Number) tonKho.getValue()).intValue());
 
             database.run(() -> banGoc == null ? sanPhamDAO.them(sp) : sanPhamDAO.capNhat(sp), daLuu -> {
-                refreshChoices(); renderDetails(daLuu.getMaSKU(), daLuu);
+                refreshChoices();
+                renderDetails(daLuu.getMaSKU(), daLuu);
+                message("Đã lưu sản phẩm " + daLuu.getMaSKU() + ".", true);
             });
         }
 

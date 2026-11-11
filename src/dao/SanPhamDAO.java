@@ -80,7 +80,7 @@ public class SanPhamDAO {
     /** Lấy toàn bộ danh sách sản phẩm */
     public ArrayList<SanPham> layTatCa() {
         ArrayList<SanPham> ketQua = new ArrayList<>();
-        try (Connection conn = ConnectDB.getConnection();
+        try (Connection conn = ConnectDB.openConnection();
              PreparedStatement ps = conn.prepareStatement(SELECT_BASE + " ORDER BY sp.maSKU");
              ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
@@ -95,24 +95,26 @@ public class SanPhamDAO {
     /** Tìm sản phẩm theo mã SKU (mã SKU là khóa chính duy nhất) */
     public SanPham timTheoMa(String maSKU) {
         if (maSKU == null || maSKU.trim().isEmpty()) return null;
-        try (Connection conn = ConnectDB.getConnection();
-             PreparedStatement ps = conn.prepareStatement(SELECT_BASE + " WHERE sp.maSKU = ?")) {
-            ps.setString(1, maSKU.trim());
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    return docDong(rs);
-                }
-            }
+        try (Connection conn = ConnectDB.openConnection()) {
+            return timTheoMa(conn, maSKU.trim());
         } catch (SQLException e) {
             throw new IllegalStateException("Không thể tìm sản phẩm theo SKU " + maSKU + ".", e);
         }
-        return null;
+    }
+
+    private SanPham timTheoMa(Connection conn, String maSKU) throws SQLException {
+        try (PreparedStatement ps = conn.prepareStatement(SELECT_BASE + " WHERE sp.maSKU = ?")) {
+            ps.setString(1, maSKU);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? docDong(rs) : null;
+            }
+        }
     }
 
     /** Tìm sản phẩm theo mã vạch */
     public SanPham timTheoMaVach(String maVach) {
         if (maVach == null || maVach.trim().isEmpty()) return null;
-        try (Connection conn = ConnectDB.getConnection();
+        try (Connection conn = ConnectDB.openConnection();
              PreparedStatement ps = conn.prepareStatement(SELECT_BASE + " WHERE sp.maVach = ?")) {
             ps.setString(1, maVach.trim());
             try (ResultSet rs = ps.executeQuery()) {
@@ -131,58 +133,74 @@ public class SanPhamDAO {
         if (sanPham == null) throw new IllegalArgumentException("Chưa nhập thông tin sản phẩm.");
         kiemTra(sanPham, true);
 
-        try (Connection conn = ConnectDB.getConnection()) {
-            // Kiểm tra mã SKU đã tồn tại
-            try (PreparedStatement check = conn.prepareStatement("SELECT 1 FROM SanPham WHERE maSKU = ?")) {
-                check.setString(1, sanPham.getMaSKU());
-                try (ResultSet rs = check.executeQuery()) {
-                    if (rs.next()) {
-                        throw new IllegalArgumentException("Mã SKU '" + sanPham.getMaSKU() + "' đã tồn tại trong hệ thống.");
-                    }
-                }
-            }
-
-            // Kiểm tra mã vạch duy nhất
-            if (sanPham.getMaVach() != null && !sanPham.getMaVach().isEmpty()) {
-                try (PreparedStatement check = conn.prepareStatement("SELECT 1 FROM SanPham WHERE maVach = ?")) {
-                    check.setString(1, sanPham.getMaVach());
+        try (Connection conn = ConnectDB.openConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                // Kiểm tra mã SKU đã tồn tại
+                try (PreparedStatement check = conn.prepareStatement("SELECT 1 FROM SanPham WHERE maSKU = ?")) {
+                    check.setString(1, sanPham.getMaSKU());
                     try (ResultSet rs = check.executeQuery()) {
                         if (rs.next()) {
-                            throw new IllegalArgumentException("Mã vạch '" + sanPham.getMaVach() + "' đã tồn tại ở sản phẩm khác.");
+                            throw new IllegalArgumentException("Mã SKU '" + sanPham.getMaSKU() + "' đã tồn tại trong hệ thống.");
                         }
                     }
                 }
-            }
 
-            // Insert thông tin (Không cần truyền ngayTao và ngayCapNhat vì SQL Server có DEFAULT)
-            String sql = "INSERT INTO SanPham (maSKU, maVach, tenSP, donGia, thoiGianBaoHanh, slTon, thuongHieu, " +
-                         "model, moTa, nhomSanPham, trangThai, maDanhMuc, maKM, hinhAnh) " +
-                         "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-            try (PreparedStatement ps = conn.prepareStatement(sql)) {
-                ps.setString(1, sanPham.getMaSKU());
-                ps.setString(2, (sanPham.getMaVach() == null || sanPham.getMaVach().isEmpty()) ? null : sanPham.getMaVach());
-                ps.setString(3, sanPham.getTenSP());
-                ps.setBigDecimal(4, sanPham.getDonGia());
-                ps.setInt(5, sanPham.getThoiGianBaoHanh());
-                ps.setInt(6, sanPham.getSlTon());
-                ps.setString(7, sanPham.getThuongHieu());
-                ps.setString(8, (sanPham.getModel() == null || sanPham.getModel().isEmpty()) ? null : sanPham.getModel());
-                ps.setString(9, (sanPham.getMoTa() == null || sanPham.getMoTa().isEmpty()) ? null : sanPham.getMoTa());
-                ps.setString(10, sanPham.getNhomSP());
-                ps.setBoolean(11, sanPham.isTrangThai());
-                ps.setString(12, sanPham.getDanhMuc().getMaDanhMuc()); // Chú ý gọi hàm lấy mã Danh Mục chuẩn
+                // Kiểm tra mã vạch duy nhất
+                if (sanPham.getMaVach() != null && !sanPham.getMaVach().isEmpty()) {
+                    try (PreparedStatement check = conn.prepareStatement("SELECT 1 FROM SanPham WHERE maVach = ?")) {
+                        check.setString(1, sanPham.getMaVach());
+                        try (ResultSet rs = check.executeQuery()) {
+                            if (rs.next()) {
+                                throw new IllegalArgumentException("Mã vạch '" + sanPham.getMaVach() + "' đã tồn tại ở sản phẩm khác.");
+                            }
+                        }
+                    }
+                }
+
+                // Insert thông tin (Không cần truyền ngayTao và ngayCapNhat vì SQL Server có DEFAULT)
+                String sql = "INSERT INTO SanPham (maSKU, maVach, tenSP, donGia, thoiGianBaoHanh, slTon, thuongHieu, " +
+                             "model, moTa, nhomSanPham, trangThai, maDanhMuc, maKM, hinhAnh) " +
+                             "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                    ps.setString(1, sanPham.getMaSKU());
+                    ps.setString(2, (sanPham.getMaVach() == null || sanPham.getMaVach().isEmpty()) ? null : sanPham.getMaVach());
+                    ps.setString(3, sanPham.getTenSP());
+                    ps.setBigDecimal(4, sanPham.getDonGia());
+                    ps.setInt(5, sanPham.getThoiGianBaoHanh());
+                    ps.setInt(6, sanPham.getSlTon());
+                    ps.setString(7, sanPham.getThuongHieu());
+                    ps.setString(8, (sanPham.getModel() == null || sanPham.getModel().isEmpty()) ? null : sanPham.getModel());
+                    ps.setString(9, (sanPham.getMoTa() == null || sanPham.getMoTa().isEmpty()) ? null : sanPham.getMoTa());
+                    ps.setString(10, sanPham.getNhomSP());
+                    ps.setBoolean(11, sanPham.isTrangThai());
+                    ps.setString(12, sanPham.getDanhMuc().getMaDanhMuc()); // Chú ý gọi hàm lấy mã Danh Mục chuẩn
                 
-                if (sanPham.getMaKM() == null) ps.setNull(13, Types.VARCHAR);
-                else ps.setString(13, sanPham.getMaKM());
+                    if (sanPham.getMaKM() == null) ps.setNull(13, Types.VARCHAR);
+                    else ps.setString(13, sanPham.getMaKM());
                 
-                ps.setString(14, (sanPham.getHinhAnh() == null || sanPham.getHinhAnh().isEmpty()) ? null : sanPham.getHinhAnh());
+                    ps.setString(14, (sanPham.getHinhAnh() == null || sanPham.getHinhAnh().isEmpty()) ? null : sanPham.getHinhAnh());
                 
-                ps.executeUpdate();
+                    ps.executeUpdate();
+                }
+                SanPham daLuu = timTheoMa(conn, sanPham.getMaSKU());
+                if (daLuu == null) throw new SQLException("Không đọc được sản phẩm vừa thêm.");
+                conn.commit();
+                return daLuu;
+            } catch (SQLException | RuntimeException e) {
+                try {
+                    conn.rollback();
+                } catch (SQLException rollbackError) {
+                    e.addSuppressed(rollbackError);
+                }
+                throw e;
             }
-            return timTheoMa(sanPham.getMaSKU());
         } catch (SQLException e) {
-            if ("23000".equals(e.getSQLState())) {
-                throw new IllegalArgumentException("SKU, mã vạch, danh mục hoặc khuyến mãi không hợp lệ hoặc đã tồn tại.", e);
+            if (e.getErrorCode() == 2601 || e.getErrorCode() == 2627) {
+                throw new IllegalArgumentException("SKU hoặc mã vạch đã tồn tại.", e);
+            }
+            if (e.getErrorCode() == 547 || "23000".equals(e.getSQLState())) {
+                throw new IllegalArgumentException("Dữ liệu sản phẩm, danh mục hoặc khuyến mãi không hợp lệ.", e);
             }
             throw new IllegalStateException("Không thể lưu sản phẩm vào cơ sở dữ liệu.", e);
         }
@@ -193,7 +211,7 @@ public class SanPhamDAO {
         if (sanPham == null) throw new IllegalArgumentException("Chưa nhập thông tin sản phẩm.");
         kiemTra(sanPham, false);
 
-        try (Connection conn = ConnectDB.getConnection()) {
+        try (Connection conn = ConnectDB.openConnection()) {
             // Kiểm tra mã vạch trùng
             if (sanPham.getMaVach() != null && !sanPham.getMaVach().isEmpty()) {
                 try (PreparedStatement check = conn.prepareStatement("SELECT 1 FROM SanPham WHERE maVach = ? AND maSKU <> ?")) {
@@ -244,7 +262,7 @@ public class SanPhamDAO {
     /** Đổi trạng thái kinh doanh của sản phẩm */
     public void chuyenTrangThai(String maSKU, boolean dangKinhDoanh) {
         if (maSKU == null || maSKU.trim().isEmpty()) return;
-        try (Connection conn = ConnectDB.getConnection();
+        try (Connection conn = ConnectDB.openConnection();
              PreparedStatement ps = conn.prepareStatement("UPDATE SanPham SET trangThai = ? WHERE maSKU = ?")) {
             ps.setBoolean(1, dangKinhDoanh);
             ps.setString(2, maSKU.trim());
@@ -261,7 +279,7 @@ public class SanPhamDAO {
         if (maSKU == null || maSKU.trim().isEmpty()) throw new IllegalArgumentException("Chưa chọn sản phẩm.");
         if (soLuongNhap <= 0) throw new IllegalArgumentException("Số lượng nhập phải lớn hơn 0.");
         String sql = "UPDATE SanPham SET slTon = slTon + ? WHERE maSKU = ? AND slTon <= 2147483647 - ?";
-        try (Connection conn = ConnectDB.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (Connection conn = ConnectDB.openConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, soLuongNhap);
             ps.setString(2, maSKU.trim());
             ps.setInt(3, soLuongNhap);
@@ -286,7 +304,7 @@ public class SanPhamDAO {
         }
         if (sp.getSlTon() != 0) throw new IllegalArgumentException("Chỉ xóa sản phẩm khi tồn kho bằng 0.");
 
-        try (Connection conn = ConnectDB.getConnection()) {
+        try (Connection conn = ConnectDB.openConnection()) {
             try (PreparedStatement check = conn.prepareStatement("SELECT 1 FROM ChiTietHoaDon WHERE maSKU = ?")) {
                 check.setString(1, sku);
                 try (ResultSet rs = check.executeQuery()) {
@@ -351,7 +369,10 @@ public class SanPhamDAO {
         if (gia == null || gia.compareTo(BigDecimal.ZERO) <= 0 || gia.compareTo(new BigDecimal("999999999999999999")) > 0) {
             throw new IllegalArgumentException("Đơn giá bán phải lớn hơn 0 đ.");
         }
-        sp.setDonGia(gia.setScale(0, java.math.RoundingMode.HALF_UP));
+        if (gia.stripTrailingZeros().scale() > 0) {
+            throw new IllegalArgumentException("Giá bán phải là số nguyên VND.");
+        }
+        sp.setDonGia(gia.setScale(0));
 
         if (sp.getThoiGianBaoHanh() < 0 || sp.getThoiGianBaoHanh() > 120) throw new IllegalArgumentException("Thời gian bảo hành từ 0 đến 120 tháng.");
         if (sp.getSlTon() < 0) throw new IllegalArgumentException("Tồn kho không được âm.");
@@ -365,7 +386,7 @@ public class SanPhamDAO {
     /** Lấy danh sách thương hiệu hiện có */
     public ArrayList<String> layThuongHieu() {
         ArrayList<String> ds = new ArrayList<>();
-        try (Connection conn = ConnectDB.getConnection();
+        try (Connection conn = ConnectDB.openConnection();
              PreparedStatement ps = conn.prepareStatement(
                      "SELECT DISTINCT thuongHieu FROM SanPham WHERE thuongHieu IS NOT NULL AND thuongHieu <> '' ORDER BY thuongHieu");
              ResultSet rs = ps.executeQuery()) {
@@ -381,7 +402,7 @@ public class SanPhamDAO {
     /** Lấy danh sách các mức bảo hành */
     public ArrayList<Integer> layBaoHanh() {
         ArrayList<Integer> ds = new ArrayList<>();
-        try (Connection conn = ConnectDB.getConnection();
+        try (Connection conn = ConnectDB.openConnection();
              PreparedStatement ps = conn.prepareStatement(
                      "SELECT DISTINCT thoiGianBaoHanh FROM SanPham WHERE thoiGianBaoHanh IS NOT NULL ORDER BY thoiGianBaoHanh");
              ResultSet rs = ps.executeQuery()) {
@@ -397,7 +418,7 @@ public class SanPhamDAO {
     /** Lấy toàn bộ danh sách Khuyến Mãi */
     public ArrayList<KhuyenMai> layDanhSachKhuyenMai() {
         ArrayList<KhuyenMai> ds = new ArrayList<>();
-        try (Connection conn = ConnectDB.getConnection();
+        try (Connection conn = ConnectDB.openConnection();
              PreparedStatement ps = conn.prepareStatement("SELECT maKM, tenKM, giaTriGiam, loaiKM, trangThai FROM KhuyenMai ORDER BY maKM");
              ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
