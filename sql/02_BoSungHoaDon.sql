@@ -1,5 +1,5 @@
 -- Chạy sau QuanLyBanHang.sql. Chỉ thêm cột nullable, không xóa hoặc sửa dữ liệu hiện có.
-USE QuanLyBanHang;
+/*USE QuanLyBanHang;
 GO
 IF COL_LENGTH('dbo.HoaDon','tienKhachDua') IS NULL
     ALTER TABLE dbo.HoaDon ADD tienKhachDua DECIMAL(18,0) NULL;

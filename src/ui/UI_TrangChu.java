@@ -308,7 +308,7 @@ public class UI_TrangChu extends JFrame implements ActionListener {
             chuyenTrang(new String[][]{{"Khách hàng", "KhachHang", "Đăng ký khách hàng mới"}});
         };
         
-        PNL_ChiTietHoaDon chiTietHoaDon = new PNL_ChiTietHoaDon(veDanhSachHoaDon);
+//        PNL_ChiTietHoaDon chiTietHoaDon = new PNL_ChiTietHoaDon(veDanhSachHoaDon);
         
         pnlCards.add(createTongQuanPanel(), "TongQuan"); 
 
@@ -318,20 +318,20 @@ public class UI_TrangChu extends JFrame implements ActionListener {
         
         pnlCards.add(new PNL_KhuyenMai(), "KhuyenMai");
         pnlCards.add(new PNL_NhanVien(), "NhanVien");
-        pnlCards.add(new PNL_LapHoaDon(veDanhSachHoaDon), "LapHoaDon");
-        pnlCards.add(chiTietHoaDon, "ChiTietHoaDon");
-        pnlCards.add(new PNL_HoaDon(
-            () -> {
-                setActiveMenu(btnHoaDon);
-                chuyenTrang(new String[][]{{"Hóa đơn", "HoaDon", "Quản lý hóa đơn"}, {"Lập hóa đơn", "LapHoaDon", "Lập hóa đơn bán hàng"}});
-            },
-            hoaDon -> {
-                chiTietHoaDon.setHoaDon(hoaDon);
-                setActiveMenu(btnHoaDon);
-                chuyenTrang(new String[][]{{"Hóa đơn", "HoaDon", "Quản lý hóa đơn"}, {"Chi tiết hóa đơn", "ChiTietHoaDon", "Chi tiết hóa đơn"}});
-            }), "HoaDon");
+//        pnlCards.add(new PNL_LapHoaDon(veDanhSachHoaDon), "LapHoaDon");
+//        pnlCards.add(chiTietHoaDon, "ChiTietHoaDon");
+//        pnlCards.add(new PNL_HoaDon(
+//            () -> {
+//                setActiveMenu(btnHoaDon);
+//                chuyenTrang(new String[][]{{"Hóa đơn", "HoaDon", "Quản lý hóa đơn"}, {"Lập hóa đơn", "LapHoaDon", "Lập hóa đơn bán hàng"}});
+//            },
+//            hoaDon -> {
+//                chiTietHoaDon.setHoaDon(hoaDon);
+//                setActiveMenu(btnHoaDon);
+//                chuyenTrang(new String[][]{{"Hóa đơn", "HoaDon", "Quản lý hóa đơn"}, {"Chi tiết hóa đơn", "ChiTietHoaDon", "Chi tiết hóa đơn"}});
+//            }), "HoaDon");
         pnlCards.add(new PNL_BaoHanh(), "BaoHanh");
-        pnlCards.add(new PNL_BaoCao(), "BaoCao");
+//        pnlCards.add(new PNL_BaoCao(), "BaoCao");
         
         
         btnTongQuan.addActionListener(this);

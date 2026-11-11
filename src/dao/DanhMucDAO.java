@@ -2,157 +2,149 @@ package dao;
 
 import connect.ConnectDB;
 import entity.DanhMuc;
+
 import java.sql.*;
 import java.util.ArrayList;
-import java.util.Locale;
+import java.util.HashMap;
+import java.util.Map;
 
-/** Danh mục sản phẩm được đọc/ghi thống nhất trong SQL Server. */
 public class DanhMucDAO {
-    public DanhMucDAO() { }
-    public DanhMucDAO(DuLieuTam ignored) { this(); }
+    // Gọi class kết nối DB của bạn. 
+    // Nếu bị lỗi đỏ dòng này, hãy đổi thành: ConnectDB.getInstance().getConnection();
+    private Connection conn = ConnectDB.getConnection(); 
 
-    public DanhMuc timTheoMa(String maDanhMuc) {
-        if (maDanhMuc == null || maDanhMuc.isBlank()) return null;
-        try (Connection conn = ConnectDB.openConnection();
-             PreparedStatement ps = conn.prepareStatement("SELECT maDanhMuc, tenDanhMuc, moTa FROM dbo.DanhMuc WHERE maDanhMuc = ?")) {
-            ps.setString(1, maDanhMuc.trim());
-            try (ResultSet rs = ps.executeQuery()) {
-                return rs.next() ? new DanhMuc(rs.getString(1), rs.getString(2), rs.getString(3)) : null;
-            }
-        } catch (SQLException e) { throw new IllegalStateException("Không thể tải danh mục.", e); }
+    public DanhMucDAO() {
     }
 
-    /** Lấy toàn bộ danh mục từ CSDL */
+    /**
+     * Lấy toàn bộ danh sách Danh Mục từ SQL (Đã đổi tên thành layTatCa cho khớp UI)
+     */
     public ArrayList<DanhMuc> layTatCa() {
-        ArrayList<DanhMuc> ds = new ArrayList<>();
-        try (Connection conn = ConnectDB.openConnection();
-             PreparedStatement ps = conn.prepareStatement("SELECT maDanhMuc, tenDanhMuc, moTa FROM DanhMuc ORDER BY maDanhMuc");
-             ResultSet rs = ps.executeQuery()) {
+        ArrayList<DanhMuc> list = new ArrayList<>();
+        String sql = "SELECT * FROM DanhMuc ORDER BY maDanhMuc"; 
+        
+        try (Statement st = conn.createStatement();
+             ResultSet rs = st.executeQuery(sql)) {
+            
             while (rs.next()) {
-                ds.add(new DanhMuc(rs.getString("maDanhMuc"), rs.getString("tenDanhMuc"), rs.getString("moTa")));
-            }
-            return ds;
-        } catch (SQLException e) {
-            throw new IllegalStateException("Không thể tải danh sách danh mục.", e);
-        }
-    }
-
-    public String layTen(String maDanhMuc) {
-        if (maDanhMuc == null || maDanhMuc.isBlank()) return "";
-        try (Connection conn = ConnectDB.openConnection();
-             PreparedStatement ps = conn.prepareStatement("SELECT tenDanhMuc FROM DanhMuc WHERE maDanhMuc = ?")) {
-            ps.setString(1, maDanhMuc.trim());
-            try (ResultSet rs = ps.executeQuery()) {
-                return rs.next() ? rs.getString(1) : "";
+                DanhMuc dm = new DanhMuc();
+                dm.setMaDanhMuc(rs.getString("maDanhMuc"));
+                dm.setTenDanhMuc(rs.getString("tenDanhMuc"));
+                dm.setMoTa(rs.getString("moTa"));
+                list.add(dm);
             }
         } catch (SQLException e) {
-            throw new IllegalStateException("Không thể đọc tên danh mục sản phẩm.", e);
+            e.printStackTrace();
         }
+        return list;
     }
 
-    public java.util.Map<String, Integer> demTheoDanhMuc() {
-        java.util.Map<String, Integer> counts = new java.util.HashMap<>();
-        try (Connection conn = ConnectDB.openConnection();
-             PreparedStatement ps = conn.prepareStatement("SELECT maDanhMuc, COUNT(*) FROM dbo.SanPham GROUP BY maDanhMuc");
-             ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) counts.put(rs.getString(1), rs.getInt(2));
-            return counts;
-        } catch (SQLException e) { throw new IllegalStateException("Không thể đếm sản phẩm trong danh mục.", e); }
-    }
-
-    public int demSanPham(String maDanhMuc) {
-        try (Connection conn = ConnectDB.openConnection();
-             PreparedStatement ps = conn.prepareStatement("SELECT COUNT(*) FROM SanPham WHERE maDanhMuc = ?")) {
-            ps.setString(1, maDanhMuc);
-            try (ResultSet rs = ps.executeQuery()) {
-                return rs.next() ? rs.getInt(1) : 0;
+    /**
+     * Đếm số lượng sản phẩm theo từng danh mục
+     */
+    public Map<String, Integer> demTheoDanhMuc() {
+        Map<String, Integer> counts = new HashMap<>();
+        String sql = "SELECT maDanhMuc, COUNT(*) as soLuong FROM SanPham GROUP BY maDanhMuc";
+        
+        try (Statement st = conn.createStatement();
+             ResultSet rs = st.executeQuery(sql)) {
+            while (rs.next()) {
+                counts.put(rs.getString("maDanhMuc"), rs.getInt("soLuong"));
             }
         } catch (SQLException e) {
-            throw new IllegalStateException("Không thể đếm sản phẩm trong danh mục.", e);
+            e.printStackTrace();
         }
+        return counts;
     }
 
-    public DanhMuc them(DanhMuc input) {
-        DanhMuc dm = kiemTra(input);
-        try (Connection conn = ConnectDB.openConnection()) {
-            try (PreparedStatement check = conn.prepareStatement(
-                    "SELECT 1 FROM DanhMuc WHERE LOWER(tenDanhMuc) = LOWER(?)")) {
-                check.setString(1, dm.getTenDM());
-                try (ResultSet rs = check.executeQuery()) {
-                    if (rs.next()) throw new IllegalArgumentException("Tên danh mục đã tồn tại.");
+    /**
+     * Tìm danh mục theo Mã
+     */
+    public DanhMuc getByMa(String maDanhMuc) {
+        String sql = "SELECT * FROM DanhMuc WHERE maDanhMuc = ?";
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setString(1, maDanhMuc);
+            try (ResultSet rs = pst.executeQuery()) {
+                if (rs.next()) {
+                    DanhMuc dm = new DanhMuc();
+                    dm.setMaDanhMuc(rs.getString("maDanhMuc"));
+                    dm.setTenDanhMuc(rs.getString("tenDanhMuc"));
+                    dm.setMoTa(rs.getString("moTa"));
+                    return dm;
                 }
             }
-            dm.setMaDM(taoMaDanhMuc(conn));
-            try (PreparedStatement ps = conn.prepareStatement(
-                    "INSERT INTO DanhMuc (maDanhMuc, tenDanhMuc, moTa) VALUES (?, ?, ?)")) {
-                ps.setString(1, dm.getMaDM());
-                ps.setString(2, dm.getTenDM());
-                ps.setString(3, dm.getMoTa().isEmpty() ? null : dm.getMoTa());
-                ps.executeUpdate();
-            }
-            return dm;
         } catch (SQLException e) {
-            throw new IllegalStateException("Không thể thêm danh mục sản phẩm.", e);
+            e.printStackTrace();
         }
+        return null;
     }
 
-    public DanhMuc capNhat(DanhMuc input) {
-        DanhMuc dm = kiemTra(input);
-        if (dm.getMaDM() == null || dm.getMaDM().isBlank())
-            throw new IllegalArgumentException("Mã danh mục không được để trống.");
-        try (Connection conn = ConnectDB.openConnection()) {
-            try (PreparedStatement check = conn.prepareStatement(
-                    "SELECT 1 FROM DanhMuc WHERE LOWER(tenDanhMuc) = LOWER(?) AND maDanhMuc <> ?")) {
-                check.setString(1, dm.getTenDM());
-                check.setString(2, dm.getMaDM());
-                try (ResultSet rs = check.executeQuery()) {
-                    if (rs.next()) throw new IllegalArgumentException("Tên danh mục đã tồn tại.");
-                }
+    /**
+     * Tự động sinh mã danh mục mới (Dùng Sequence trong SQL Server)
+     */
+    public String phatSinhMaMoi() {
+        String sql = "SELECT NEXT VALUE FOR dbo.SeqMaDanhMuc";
+        try (Statement st = conn.createStatement();
+             ResultSet rs = st.executeQuery(sql)) {
+            if (rs.next()) {
+                return String.format("DM%02d", rs.getLong(1)); // Ví dụ: DM07
             }
-            try (PreparedStatement ps = conn.prepareStatement(
-                    "UPDATE DanhMuc SET tenDanhMuc = ?, moTa = ? WHERE maDanhMuc = ?")) {
-                ps.setString(1, dm.getTenDM());
-                ps.setString(2, dm.getMoTa().isEmpty() ? null : dm.getMoTa());
-                ps.setString(3, dm.getMaDM());
-                if (ps.executeUpdate() == 0) throw new IllegalArgumentException("Danh mục không còn tồn tại.");
-            }
-            return dm;
         } catch (SQLException e) {
-            throw new IllegalStateException("Không thể cập nhật danh mục sản phẩm.", e);
+            e.printStackTrace();
         }
+        return null; 
     }
 
+    /**
+     * Thêm danh mục mới vào SQL (Trả về chính DanhMuc đó thay vì boolean)
+     */
+    public DanhMuc themDanhMuc(DanhMuc dm) {
+        // Tự động sinh mã mới nếu chưa có
+        if (dm.getMaDanhMuc() == null || dm.getMaDanhMuc().isEmpty()) {
+            dm.setMaDanhMuc(phatSinhMaMoi());
+        }
+        
+        String sql = "INSERT INTO DanhMuc (maDanhMuc, tenDanhMuc, moTa) VALUES (?, ?, ?)";
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setString(1, dm.getMaDanhMuc());
+            pst.setString(2, dm.getTenDanhMuc());
+            pst.setString(3, dm.getMoTa());
+            pst.executeUpdate();
+            return dm; // Trả về đối tượng vừa lưu thành công
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    /**
+     * Cập nhật thông tin danh mục theo Mã
+     */
+    public DanhMuc capNhatDanhMuc(DanhMuc dm) {
+        String sql = "UPDATE DanhMuc SET tenDanhMuc = ?, moTa = ? WHERE maDanhMuc = ?";
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setString(1, dm.getTenDanhMuc());
+            pst.setString(2, dm.getMoTa());
+            pst.setString(3, dm.getMaDanhMuc());
+            pst.executeUpdate();
+            return dm;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    /**
+     * Xóa danh mục theo Mã
+     */
     public void xoa(String maDanhMuc) {
-        if (maDanhMuc == null || maDanhMuc.isBlank()) throw new IllegalArgumentException("Chưa chọn danh mục.");
-        if (demSanPham(maDanhMuc) > 0)
-            throw new IllegalArgumentException("Không thể xóa danh mục đang được sản phẩm sử dụng.");
-        try (Connection conn = ConnectDB.openConnection();
-             PreparedStatement ps = conn.prepareStatement("DELETE FROM DanhMuc WHERE maDanhMuc = ?")) {
-            ps.setString(1, maDanhMuc.trim());
-            if (ps.executeUpdate() == 0) throw new IllegalArgumentException("Danh mục không còn tồn tại.");
+        String sql = "DELETE FROM DanhMuc WHERE maDanhMuc = ?";
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setString(1, maDanhMuc);
+            pst.executeUpdate();
         } catch (SQLException e) {
-            throw new IllegalStateException("Không thể xóa danh mục sản phẩm.", e);
+            // Ném lỗi để UI (PNL_SanPham) bắt và hiển thị thông báo đỏ
+            throw new RuntimeException("Không thể xóa danh mục này do đang chứa sản phẩm!", e);
         }
     }
-
-    private DanhMuc kiemTra(DanhMuc input) {
-        if (input == null) throw new IllegalArgumentException("Chưa nhập danh mục.");
-        DanhMuc dm = new DanhMuc(input);
-        dm.setTenDM(dm.getTenDM() == null ? "" : dm.getTenDM().trim().replaceAll("\\s+", " "));
-        dm.setMoTa(dm.getMoTa() == null ? "" : dm.getMoTa().trim());
-        if (dm.getTenDM().length() < 2 || dm.getTenDM().length() > 100)
-            throw new IllegalArgumentException("Tên danh mục phải có từ 2 đến 100 ký tự.");
-        if (dm.getMoTa().length() > 255)
-            throw new IllegalArgumentException("Mô tả danh mục tối đa 255 ký tự.");
-        return dm;
-    }
-
-    private String taoMaDanhMuc(Connection conn) throws SQLException {
-        try (PreparedStatement ps = conn.prepareStatement("SELECT NEXT VALUE FOR dbo.SeqMaDanhMuc");
-             ResultSet rs = ps.executeQuery()) {
-            rs.next();
-            return String.format(Locale.ROOT, "DM%02d", rs.getLong(1));
-        }
-    }
-
 }

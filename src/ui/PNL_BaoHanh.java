@@ -36,6 +36,7 @@ public class PNL_BaoHanh extends JPanel {
     private JTable table;
     private DefaultTableModel tableModel;
     private TableRowSorter<DefaultTableModel> rowSorter;
+    private final PhieuBaoHanh_DAO phieuBaoHanhDAO = new PhieuBaoHanh_DAO();
 
     private JTextField txtSearch;
     private JComboBox<String> cbStatus;
@@ -133,6 +134,7 @@ public class PNL_BaoHanh extends JPanel {
         pnlCardContainer.add(createLapPhieuPanel(), "LAP_PHIEU");
 
         add(pnlCardContainer, BorderLayout.CENTER);
+        loadData();
         cardLayout.show(pnlCardContainer, "DANH_SACH");
     }
 
@@ -169,14 +171,14 @@ public class PNL_BaoHanh extends JPanel {
         pnlFilterControls.setOpaque(false);
 
         cbStatus = new JComboBox<>(new String[]{
-            "Trạng thái: Tất cả", "Đang xử lý", "Đã hoàn thành", "Từ chối"
+            "Trạng thái: Tất cả", "Đang xử lý", "Đang tiếp nhận", "Hoàn thành", "Từ chối"
         });
         cbStatus.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         cbStatus.setBackground(Color.WHITE);
         cbStatus.setPreferredSize(new Dimension(145, 32));
 
         cbType = new JComboBox<>(new String[]{
-            "Loại: Tất cả", "Bảo hành phần cứng", "Bảo hành phần mềm"
+            "Loại: Tất cả", "Bảo hành chính hãng", "Sửa chữa dịch vụ"
         });
         cbType.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         cbType.setBackground(Color.WHITE);
@@ -278,26 +280,11 @@ public class PNL_BaoHanh extends JPanel {
         pnlTableContainer.add(pnlTabs, BorderLayout.NORTH);
 
         String[] columns = {"STT", "Mã phiếu", "Ngày tạo", "Khách hàng", "Sản phẩm", "Loại bảo hành", "Trạng thái", "Thao tác"};
-        String tagDangXuLy = "<html><span style='background-color:#ffedd5; color:#ea580c; padding:4px 10px; border-radius:10px; font-size:11px;'>● Đang xử lý</span></html>";
-        String tagHoanThanh = "<html><span style='background-color:#dcfce7; color:#16a34a; padding:4px 10px; border-radius:10px; font-size:11px;'>● Đã hoàn thành</span></html>";
-        String tagTuChoi = "<html><span style='background-color:#fee2e2; color:#dc2626; padding:4px 10px; border-radius:10px; font-size:11px;'>● Từ chối</span></html>";
-
-        Object[][] data = {
-            {"1", "BH00018", "27/10/2026", "Nguyễn Thị Lan", "Điện thoại XYZ", "Bảo hành phần cứng", tagDangXuLy, ""},
-            {"2", "BH00017", "26/10/2026", "Trần Văn Hùng", "Laptop ABC", "Bảo hành phần cứng", tagDangXuLy, ""},
-            {"3", "BH00016", "25/10/2026", "Lê Thị Mai", "Tai nghe TWS", "Bảo hành phần mềm", tagHoanThanh, ""},
-            {"4", "BH00015", "24/10/2026", "Phạm Văn Dũng", "Smartwatch GT", "Bảo hành phần cứng", tagHoanThanh, ""},
-            {"5", "BH00014", "23/10/2026", "Hoàng Thị Bích", "Điện thoại XYZ", "Bảo hành phần cứng", tagDangXuLy, ""},
-            {"6", "BH00013", "22/10/2026", "Nguyễn Minh Anh", "Laptop ABC", "Bảo hành phần mềm", tagHoanThanh, ""},
-            {"7", "BH00012", "21/10/2026", "Vũ Đức Long", "Tai nghe TWS", "Bảo hành phần mềm", tagTuChoi, ""},
-            {"8", "BH00011", "20/10/2026", "Đỗ Thị Hương", "Smartwatch GT", "Bảo hành phần cứng", tagHoanThanh, ""},
-            {"9", "BH00010", "19/10/2026", "Ngô Văn Phúc", "Điện thoại XYZ", "Bảo hành phần cứng", tagDangXuLy, ""},
-            {"10", "BH00009", "18/10/2026", "Lý Thị Quyên", "Laptop ABC", "Bảo hành phần cứng", tagHoanThanh, ""}
-        };
-
-        tableModel = new DefaultTableModel(data, columns) { 
+        tableModel = new DefaultTableModel(null, columns) {
             @Override
-            public boolean isCellEditable(int row, int column) { return column == 7; }
+            public boolean isCellEditable(int row, int column) {
+                return column == 7;
+            }
         };
 
         table = new JTable(tableModel);
@@ -519,8 +506,8 @@ public class PNL_BaoHanh extends JPanel {
             boolean thanhCong = dao.themPhieuBaoHanh(phieu);
             if (thanhCong) {
                 JOptionPane.showMessageDialog(pnlLapPhieu, "Lập phiếu bảo hành thành công!", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
-                cardLayout.show(pnlCardContainer, "DANH_SACH"); 
-                // Gọi lại hàm load dữ liệu lên bảng nếu cần thiết
+                loadData();
+                cardLayout.show(pnlCardContainer, "DANH_SACH");
             } else {
                 JOptionPane.showMessageDialog(pnlLapPhieu, "Lưu phiếu thất bại vào CSDL!", "Lỗi", JOptionPane.ERROR_MESSAGE);
             }
@@ -531,6 +518,54 @@ public class PNL_BaoHanh extends JPanel {
         pnlLapPhieu.add(pnlBottom, BorderLayout.SOUTH);
 
         return pnlLapPhieu;
+    }
+
+    /** Tải danh sách phiếu bảo hành trực tiếp từ SQL Server. */
+    private void loadData() {
+        if (tableModel == null) return;
+
+        tableModel.setRowCount(0);
+        try {
+            List<PhieuBaoHanh> ds = phieuBaoHanhDAO.getAll();
+            SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
+            int stt = 1;
+
+            for (PhieuBaoHanh p : ds) {
+                String maKH = p.getKhachHang() != null && p.getKhachHang().getMaKH() != null
+                        ? p.getKhachHang().getMaKH() : "";
+                String maSKU = p.getSanPham() != null && p.getSanPham().getMaSKU() != null
+                        ? p.getSanPham().getMaSKU() : "";
+                String ngayTiepNhan = p.getNgayTiepNhan() != null
+                        ? sdf.format(p.getNgayTiepNhan()) : "";
+                String trangThai = p.getTrangThai() == null ? "" : p.getTrangThai().trim();
+                String trangThaiHienThi = trangThai;
+
+                if (trangThai.equalsIgnoreCase("Đang xử lý") || trangThai.equalsIgnoreCase("Đang tiếp nhận")) {
+                    trangThaiHienThi = "<html><span style='background-color:#ffedd5;color:#ea580c;padding:4px 10px;'>● "
+                            + trangThai + "</span></html>";
+                } else if (trangThai.equalsIgnoreCase("Hoàn thành") || trangThai.equalsIgnoreCase("Đã hoàn thành")) {
+                    trangThaiHienThi = "<html><span style='background-color:#dcfce7;color:#16a34a;padding:4px 10px;'>● "
+                            + trangThai + "</span></html>";
+                } else if (trangThai.equalsIgnoreCase("Từ chối")) {
+                    trangThaiHienThi = "<html><span style='background-color:#fee2e2;color:#dc2626;padding:4px 10px;'>● "
+                            + trangThai + "</span></html>";
+                }
+
+                // Entity hiện chỉ chứa mã khách hàng và mã SKU, chưa có tên tương ứng.
+                tableModel.addRow(new Object[]{stt++, p.getMaPhieu(), ngayTiepNhan,
+                        maKH, maSKU, p.getLoaiBaoHanh(), trangThaiHienThi, ""});
+            }
+
+            if (rowSorter != null) {
+                rowSorter.setRowFilter(null);
+                applyFilters();
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                    "Không thể tải danh sách phiếu bảo hành từ SQL Server.\n" + ex.getMessage(),
+                    "Lỗi tải dữ liệu", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private void applyFilters() {

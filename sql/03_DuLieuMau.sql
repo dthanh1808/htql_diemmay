@@ -1,6 +1,6 @@
 -- Tùy chọn: dữ liệu mẫu riêng Sản Phẩm / Danh Mục / Khách Hàng.
 -- Database cũ: chạy 04_DieuChinhSanPhamKhachHang.sql trước file này.
-USE QuanLyBanHang;
+/*USE QuanLyBanHang;
 GO
 SET XACT_ABORT ON;
 BEGIN TRY
@@ -26,3 +26,4 @@ BEGIN CATCH
     THROW;
 END CATCH;
 GO
+

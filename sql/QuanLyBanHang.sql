@@ -56,6 +56,10 @@ CREATE TABLE SanPham (
     trangThai       BIT            NOT NULL CONSTRAINT DF_SP_trangThai DEFAULT 1,
     maDanhMuc       VARCHAR(10)    NOT NULL,
     maKM            VARCHAR(10)    NULL,
+    hinhAnh         NVARCHAR(MAX)  NULL,
+    ngayTao         DATETIME2(0)   NOT NULL CONSTRAINT DF_SP_ngayTao DEFAULT SYSDATETIME(),
+    ngayCapNhat     DATETIME2(0)   NOT NULL CONSTRAINT DF_SP_ngayCapNhat DEFAULT SYSDATETIME(),
+
     CONSTRAINT PK_SanPham       PRIMARY KEY (maSKU),
     CONSTRAINT CK_SP_donGia     CHECK (donGia > 0),
     CONSTRAINT CK_SP_slTon      CHECK (slTon >= 0),
@@ -64,8 +68,11 @@ CREATE TABLE SanPham (
     CONSTRAINT FK_SP_DanhMuc    FOREIGN KEY (maDanhMuc) REFERENCES DanhMuc(maDanhMuc),
     CONSTRAINT FK_SP_KhuyenMai  FOREIGN KEY (maKM) REFERENCES KhuyenMai(maKM)
 );
+GO
+
 -- Chỉ các barcode có giá trị phải duy nhất; sản phẩm chưa có barcode vẫn được thêm tự do.
 CREATE UNIQUE INDEX UX_SanPham_maVach_NotNull ON SanPham(maVach) WHERE maVach IS NOT NULL;
+GO
 
 /* ==========================================================
    4. DANH MỤC CA
@@ -197,7 +204,6 @@ CREATE TABLE HoaDon (
     maNV                 VARCHAR(10)    NOT NULL,
     maKH                 VARCHAR(10)    NULL,
     maKM                 VARCHAR(10)    NULL,
-    maCa                 VARCHAR(10)    NULL,
     CONSTRAINT PK_HoaDon             PRIMARY KEY (maHD),
     CONSTRAINT CK_HD_maHD_format     CHECK (LEN(maHD) = 12 AND maHD LIKE 'HD[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]'),
     CONSTRAINT CK_HD_tongTienHang    CHECK (tongTienHang >= 0),
@@ -207,7 +213,6 @@ CREATE TABLE HoaDon (
     CONSTRAINT FK_HD_NhanVien        FOREIGN KEY (maNV) REFERENCES NhanVien(maNV),
     CONSTRAINT FK_HD_KhachHang       FOREIGN KEY (maKH) REFERENCES KhachHang(maKH),
     CONSTRAINT FK_HD_KhuyenMai       FOREIGN KEY (maKM) REFERENCES KhuyenMai(maKM),
-    CONSTRAINT FK_HD_CaLamViec       FOREIGN KEY (maCa) REFERENCES CaLamViec(maCa)
 );
 
 /* ==========================================================
@@ -232,17 +237,20 @@ CREATE TABLE ChiTietHoaDon (
 CREATE TABLE PhieuBaoHanh (
     maPhieu        VARCHAR(10)    NOT NULL,
     soSerial       VARCHAR(50)    NULL,
+    loaiBaoHanh    NVARCHAR(50)   NULL,         
     ngayTiepNhan   DATE           NOT NULL,
     ngayHenTra     DATE           NULL,
-    moTa           NVARCHAR(255)  NULL,
+    ghiChu         NVARCHAR(255)  NULL,          
     chiPhiSuaChua  DECIMAL(18,0)  NULL,
     trangThai      NVARCHAR(30)   NULL,
-    maHD           VARCHAR(12)    NOT NULL,
-    maSKU          VARCHAR(20)    NULL,
-    maKH           VARCHAR(10)    NULL,
+    maHD           VARCHAR(12)    NOT NULL,      
+    maSKU          VARCHAR(20)    NOT NULL,     
+    maKH           VARCHAR(10)    NULL,          
+    maNV           VARCHAR(10)    NULL,          
     CONSTRAINT PK_PhieuBaoHanh        PRIMARY KEY (maPhieu),
     CONSTRAINT FK_PBH_ChiTietHoaDon   FOREIGN KEY (maHD, maSKU) REFERENCES ChiTietHoaDon(maHD, maSKU),
-    CONSTRAINT FK_PBH_KhachHang       FOREIGN KEY (maKH)  REFERENCES KhachHang(maKH)
+    CONSTRAINT FK_PBH_KhachHang       FOREIGN KEY (maKH)  REFERENCES KhachHang(maKH),
+    CONSTRAINT FK_PBH_NhanVien        FOREIGN KEY (maNV)  REFERENCES NhanVien(maNV) -- Ràng buộc cho Nhân Viên
 );
 
 /* ==========================================================
@@ -416,6 +424,22 @@ BEGIN
 END;
 GO
 
+-- Trigger tự động cập nhật 'ngayCapNhat' mỗi khi có lệnh UPDATE thông tin sản phẩm
+CREATE TRIGGER TRG_SP_CapNhatThoiGian
+ON SanPham
+AFTER UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    -- Ngăn chặn lặp vô hạn nếu trigger tự gọi lại
+    IF TRIGGER_NESTLEVEL() > 1 RETURN;
+
+    UPDATE sp
+    SET ngayCapNhat = SYSDATETIME()
+    FROM SanPham sp
+    JOIN inserted i ON sp.maSKU = i.maSKU;
+END;
+GO
 
 USE QuanLyBanHang;
 GO
@@ -535,17 +559,17 @@ INSERT INTO KhachHang (maKH, tenKH, sdt, email, diaChi, ngaySinh, gioiTinh, hang
 /* ==========================================================
    10. HÓA ĐƠN (10 dòng - Trùng ca đang mở 'CA2026060601')
    ========================================================== */
-INSERT INTO HoaDon (maHD, ngayLap, tongTienHang, tienGiamGia, tongThanhToan, phuongThucThanhToan, yeuCauGiaoHang, ghiChuGiaoHang, trangThai, maNV, maKH, maKM, maCa) VALUES
-('HD0000000001', '2026-06-06 09:30:00', 33990000, 1000000, 32990000, N'Chuyển khoản', 1, N'Giao giờ hành chính', N'Đã thanh toán', 'NV002', 'KH001', 'KM01', 'CA2026060601'),
-('HD0000000002', '2026-06-06 10:15:00', 28990000, 1000000, 27990000, N'Trả góp', 0, NULL, N'Trả góp', 'NV002', 'KH002', 'KM01', 'CA2026060601'),
-('HD0000000003', '2026-06-06 10:45:00', 26990000, 1000000, 25990000, N'Tiền mặt', 1, N'Gọi trước khi giao', N'Đã thanh toán', 'NV004', 'KH003', 'KM01', 'CA2026060601'),
-('HD0000000004', '2026-06-06 11:00:00', 7490000, 112350, 7377650, N'Chuyển khoản', 0, NULL, N'Đã thanh toán', 'NV004', 'KH004', 'KM02', 'CA2026060601'),
-('HD0000000005', '2026-06-06 11:20:00', 10490000, 157350, 10332650, N'Tiền mặt', 0, NULL, N'Đã thanh toán', 'NV002', 'KH005', 'KM02', 'CA2026060601'),
-('HD0000000006', '2026-06-06 11:35:00', 2490000, 0, 2490000, N'Tiền mặt', 0, NULL, N'Đã thanh toán', 'NV005', 'KH006', 'KM05', 'CA2026060601'),
-('HD0000000007', '2026-06-06 11:50:00', 3690000, 0, 3690000, N'Chuyển khoản', 1, N'Giao hàng cẩn thận', N'Đã thanh toán', 'NV005', 'KH007', 'KM05', 'CA2026060601'),
-('HD0000000008', '2026-06-06 12:00:00', 29990000, 1000000, 28990000, N'Trả góp', 0, NULL, N'Trả góp', 'NV002', 'KH008', 'KM01', 'CA2026060601'),
-('HD0000000009', '2026-06-06 12:15:00', 31990000, 2000000, 29990000, N'Chuyển khoản', 1, N'Giao lầu 2', N'Đã thanh toán', 'NV004', 'KH009', 'KM04', 'CA2026060601'),
-('HD0000000010', '2026-06-06 12:30:00', 7490000, 112350, 7377650, N'Tiền mặt', 0, NULL, N'Đã thanh toán', 'NV005', 'KH010', 'KM02', 'CA2026060601');
+INSERT INTO HoaDon (maHD, ngayLap, tongTienHang, tienGiamGia, tongThanhToan, phuongThucThanhToan, yeuCauGiaoHang, ghiChuGiaoHang, trangThai, maNV, maKH, maKM) VALUES
+('HD0000000001', '2026-06-06 09:30:00', 33990000, 1000000, 32990000, N'Chuyển khoản', 1, N'Giao giờ hành chính', N'Đã thanh toán', 'NV002', 'KH001', 'KM01'),
+('HD0000000002', '2026-06-06 10:15:00', 28990000, 1000000, 27990000, N'Trả góp', 0, NULL, N'Trả góp', 'NV002', 'KH002', 'KM01'),
+('HD0000000003', '2026-06-06 10:45:00', 26990000, 1000000, 25990000, N'Tiền mặt', 1, N'Gọi trước khi giao', N'Đã thanh toán', 'NV004', 'KH003', 'KM01'),
+('HD0000000004', '2026-06-06 11:00:00', 7490000, 112350, 7377650, N'Chuyển khoản', 0, NULL, N'Đã thanh toán', 'NV004', 'KH004', 'KM02'),
+('HD0000000005', '2026-06-06 11:20:00', 10490000, 157350, 10332650, N'Tiền mặt', 0, NULL, N'Đã thanh toán', 'NV002', 'KH005', 'KM02'),
+('HD0000000006', '2026-06-06 11:35:00', 2490000, 0, 2490000, N'Tiền mặt', 0, NULL, N'Đã thanh toán', 'NV005', 'KH006', 'KM05'),
+('HD0000000007', '2026-06-06 11:50:00', 3690000, 0, 3690000, N'Chuyển khoản', 1, N'Giao hàng cẩn thận', N'Đã thanh toán', 'NV005', 'KH007', 'KM05'),
+('HD0000000008', '2026-06-06 12:00:00', 29990000, 1000000, 28990000, N'Trả góp', 0, NULL, N'Trả góp', 'NV002', 'KH008', 'KM01'),
+('HD0000000009', '2026-06-06 12:15:00', 31990000, 2000000, 29990000, N'Chuyển khoản', 1, N'Giao lầu 2', N'Đã thanh toán', 'NV004', 'KH009', 'KM04'),
+('HD0000000010', '2026-06-06 12:30:00', 7490000, 112350, 7377650, N'Tiền mặt', 0, NULL, N'Đã thanh toán', 'NV005', 'KH010', 'KM02');
 
 /* ==========================================================
    11. CHI TIẾT HÓA ĐƠN (12 dòng)
@@ -567,13 +591,13 @@ INSERT INTO ChiTietHoaDon (maHD, maSKU, soLuong, donGia, thanhTien) VALUES
 /* ==========================================================
    12. PHIẾU BẢO HÀNH (6 dòng)
    ========================================================== */
-INSERT INTO PhieuBaoHanh (maPhieu, soSerial, ngayTiepNhan, ngayHenTra, moTa, chiPhiSuaChua, trangThai, maHD, maSKU, maKH) VALUES
-('PBH01', 'SN_IP15PM_01', '2026-06-06 13:00:00', '2026-06-10', N'Kiểm tra camera sau', 0, N'Đang xử lý', 'HD0000000001', 'SKU003', 'KH001'),
-('PBH02', 'SN_ASUS_02', '2026-06-06 13:30:00', '2026-06-12', N'Lỗi quạt tản nhiệt', 0, N'Đang tiếp nhận', 'HD0000000002', 'SKU001', 'KH002'),
-('PBH03', 'SN_MAC_03', '2026-06-06 14:00:00', '2026-06-08', N'Cài đặt phần mềm hệ thống', 0, N'Hoàn thành', 'HD0000000003', 'SKU002', 'KH003'),
-('PBH04', 'SN_SONY_04', '2026-06-06 14:30:00', '2026-06-11', N'Mất đệm tai nghe', 150000, N'Đang xử lý', 'HD0000000004', 'SKU004', 'KH004'),
-('PBH05', 'SN_AW9_05', '2026-06-06 15:00:00', '2026-06-09', N'Lỗi kết nối Bluetooth', 0, N'Đang tiếp nhận', 'HD0000000005', 'SKU006', 'KH005'),
-('PBH06', 'SN_JBL_06', '2026-06-06 15:30:00', '2026-06-13', N'Không sạc được pin', 0, N'Đang xử lý', 'HD0000000007', 'SKU008', 'KH007');
+INSERT INTO PhieuBaoHanh (maPhieu, soSerial, loaiBaoHanh, ngayTiepNhan, ngayHenTra, ghiChu, chiPhiSuaChua, trangThai, maHD, maSKU, maKH, maNV) VALUES
+('PBH01', 'SN_IP15PM_01', N'Bảo hành chính hãng', '2026-06-06 13:00:00', '2026-06-10', N'Kiểm tra camera sau', 0, N'Đang xử lý', 'HD0000000001', 'SKU003', 'KH001', 'NV001'),
+('PBH02', 'SN_ASUS_02', N'Bảo hành chính hãng', '2026-06-06 13:30:00', '2026-06-12', N'Lỗi quạt tản nhiệt', 0, N'Đang tiếp nhận', 'HD0000000002', 'SKU001', 'KH002', 'NV002'),
+('PBH03', 'SN_MAC_03', N'Bảo hành chính hãng', '2026-06-06 14:00:00', '2026-06-08', N'Cài đặt phần mềm hệ thống', 0, N'Hoàn thành', 'HD0000000003', 'SKU002', 'KH003', 'NV001'),
+('PBH04', 'SN_SONY_04', N'Sửa chữa dịch vụ',  '2026-06-06 14:30:00', '2026-06-11', N'Mất đệm tai nghe', 150000, N'Đang xử lý', 'HD0000000004', 'SKU004', 'KH004', 'NV002'),
+('PBH05', 'SN_AW9_05',  N'Bảo hành chính hãng', '2026-06-06 15:00:00', '2026-06-09', N'Lỗi kết nối Bluetooth', 0, N'Đang tiếp nhận', 'HD0000000005', 'SKU006', 'KH005', 'NV001'),
+('PBH06', 'SN_JBL_06',  N'Bảo hành chính hãng', '2026-06-06 15:30:00', '2026-06-13', N'Không sạc được pin', 0, N'Đang xử lý', 'HD0000000007', 'SKU008', 'KH007', 'NV002');
 
 /* ==========================================================
    13. GIAO DỊCH TRẢ GÓP (4 dòng - Khớp với các hóa đơn trả góp)
@@ -584,3 +608,21 @@ INSERT INTO GiaoDichTraGop (maTraGop, doiTacTaiChinh, kyHan, tienTraTruoc, tienG
 ('TG03', N'FE Credit', 12, 5990000, 2100000, 24000000, N'Đang trả góp', 'HD0000000009'),
 ('TG04', N'Mcredit', 9, 4990000, 2600000, 18000000, N'Đang trả góp', 'HD0000000003');
 GO
+
+select * from KhuyenMai
+
+SELECT
+    maKM,
+    tenKM,
+    loaiKM,
+    trangThai
+FROM KhuyenMai;
+
+SELECT
+    sp.maSKU,
+    sp.tenSP,
+    sp.maKM,
+    km.loaiKM
+FROM SanPham sp
+LEFT JOIN KhuyenMai km
+    ON sp.maKM = km.maKM;

@@ -1,49 +1,67 @@
 package entity;
 
+import java.util.Objects;
 
-/** Đối tượng dữ liệu, sử dụng constructor, getter và setter thông thường. */
+/** 
+ * Entity DanhMuc 
+ * Ánh xạ bảng DanhMuc trong CSDL QuanLyBanHang. 
+ */
 public class DanhMuc {
-    private String maDM;
-    private String tenDM;
+    private String maDanhMuc;  
+    private String tenDanhMuc;  
     private String moTa;
 
     public DanhMuc() { }
 
-    public DanhMuc(String maDM, String tenDM, String moTa) {
-		super();
-		this.maDM = maDM;
-		this.tenDM = tenDM;
-		this.moTa = moTa;
-	}
-
-	public DanhMuc(DanhMuc other) {
-        this(other.maDM, other.tenDM, other.moTa);
+    public DanhMuc(String maDanhMuc, String tenDanhMuc, String moTa) {
+        this.maDanhMuc = maDanhMuc;
+        this.tenDanhMuc = tenDanhMuc;
+        this.moTa = moTa;
     }
 
-    public String getMaDM() {
-		return maDM;
-	}
+    public DanhMuc(DanhMuc other) {
+        this(other.maDanhMuc, other.tenDanhMuc, other.moTa);
+    }
 
-	public void setMaDM(String maDM) {
-		this.maDM = maDM;
-	}
+    public String getMaDanhMuc() {
+        return maDanhMuc;
+    }
 
-	public String getTenDM() {
-		return tenDM;
-	}
+    public void setMaDanhMuc(String maDanhMuc) {
+        this.maDanhMuc = maDanhMuc;
+    }
 
-	public void setTenDM(String tenDM) {
-		this.tenDM = tenDM;
-	}
+    public String getTenDanhMuc() {
+        return tenDanhMuc;
+    }
 
-	public String getMoTa() {
-		return moTa;
-	}
+    public void setTenDanhMuc(String tenDanhMuc) {
+        this.tenDanhMuc = tenDanhMuc;
+    }
 
-	public void setMoTa(String moTa) {
-		this.moTa = moTa;
-	}
+    public String getMoTa() {
+        return moTa;
+    }
 
-	@Override
-    public String toString() { return tenDM; }
+    public void setMoTa(String moTa) {
+        this.moTa = moTa;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        DanhMuc danhMuc = (DanhMuc) o;
+        return Objects.equals(maDanhMuc, danhMuc.maDanhMuc);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(maDanhMuc);
+    }
+
+    @Override
+    public String toString() { 
+        return tenDanhMuc != null ? tenDanhMuc : ""; 
+    }
 }

@@ -6,46 +6,43 @@ import java.time.LocalDateTime;
 import java.util.Objects;
 
 /**
- * Entity KhachHang ánh xạ bảng KhachHang trong CSDL QuanLyBanHang.
+ * Entity KhachHang 
+ * Ánh xạ bảng KhachHang trong CSDL QuanLyBanHang.
  */
 public class KhachHang {
     private String maKH;
-    private String hoTen;
+    private String tenKH;        // Sửa từ hoTen -> tenKH
     private String sdt;
     private String email;
     private String diaChi;
     private LocalDate ngaySinh;
-    private Boolean gioiTinh;
+    private Boolean gioiTinh;    // NULLable trong SQL nên dùng Boolean
     private String hangTV;
     private BigDecimal tongChiTieuTichLuy;
-    private boolean trangThai;
-
-    // Các thuộc tính phụ tương thích UI/lịch sử cũ
+    private boolean trangThai;   // BIT NOT NULL
     private String ghiChu;
-    private boolean nhanKhuyenMai;
-    private LocalDateTime taoLuc;
-    private LocalDateTime capNhatLuc;
+    private boolean nhanKhuyenMai; // BIT NOT NULL
+    private LocalDateTime ngayTao; // Sửa từ taoLuc -> ngayTao
+    private LocalDateTime ngayCapNhat; // Sửa từ capNhatLuc -> ngayCapNhat
+
+    // --- Constructors ---
 
     public KhachHang() {
+        // Gán các giá trị DEFAULT giống hệt SQL
         this.hangTV = "Member";
         this.tongChiTieuTichLuy = BigDecimal.ZERO;
         this.trangThai = true;
-        this.gioiTinh = true;
         this.nhanKhuyenMai = false;
-        this.taoLuc = LocalDateTime.now();
-        this.capNhatLuc = this.taoLuc;
+        this.ngayTao = LocalDateTime.now();
+        this.ngayCapNhat = this.ngayTao;
     }
 
-    public KhachHang(String maKH, String hoTen, String sdt, String email, String diaChi, LocalDate ngaySinh,
-            boolean gioiTinh, String hangTV, double tongChiTieuTichLuy, boolean trangThai) {
-        this(maKH, hoTen, sdt, email, diaChi, ngaySinh, Boolean.valueOf(gioiTinh), hangTV,
-                BigDecimal.valueOf(Math.max(0.0, tongChiTieuTichLuy)), trangThai);
-    }
-
-    public KhachHang(String maKH, String hoTen, String sdt, String email, String diaChi, LocalDate ngaySinh,
-            Boolean gioiTinh, String hangTV, BigDecimal tongChiTieuTichLuy, boolean trangThai) {
+    // Constructor đầy đủ cho mọi trường
+    public KhachHang(String maKH, String tenKH, String sdt, String email, String diaChi, LocalDate ngaySinh,
+                     Boolean gioiTinh, String hangTV, BigDecimal tongChiTieuTichLuy, boolean trangThai,
+                     String ghiChu, boolean nhanKhuyenMai, LocalDateTime ngayTao, LocalDateTime ngayCapNhat) {
         this.maKH = maKH;
-        this.hoTen = hoTen;
+        this.tenKH = tenKH;
         this.sdt = sdt;
         this.email = email;
         this.diaChi = diaChi;
@@ -55,47 +52,34 @@ public class KhachHang {
         this.tongChiTieuTichLuy = tongChiTieuTichLuy == null ? BigDecimal.ZERO
                 : tongChiTieuTichLuy.max(BigDecimal.ZERO).setScale(0, java.math.RoundingMode.HALF_UP);
         this.trangThai = trangThai;
-        this.nhanKhuyenMai = false;
-        this.taoLuc = LocalDateTime.now();
-        this.capNhatLuc = this.taoLuc;
-    }
-
-    public KhachHang(KhachHang other) {
-        this(other.maKH, other.hoTen, other.sdt, other.email, other.diaChi, other.ngaySinh, other.gioiTinh,
-                other.hangTV, other.tongChiTieuTichLuy, other.trangThai);
-        this.ghiChu = other.ghiChu;
-        this.nhanKhuyenMai = other.nhanKhuyenMai;
-        this.taoLuc = other.taoLuc;
-        this.capNhatLuc = other.capNhatLuc;
-    }
-
-    /** Constructor tương thích dữ liệu mẫu cũ */
-    public KhachHang(String id, String ten, String sdt, String email, String diaChi,
-            LocalDate ngaySinh, int hang, boolean hoatDong, boolean nhanKM,
-            String ghiChu, LocalDateTime taoLuc, LocalDateTime capNhatLuc) {
-        this.maKH = id;
-        this.hoTen = ten;
-        this.sdt = sdt;
-        this.email = email;
-        this.diaChi = diaChi;
-        this.ngaySinh = ngaySinh;
-        this.gioiTinh = true;
-        this.hangTV = hang == 3 ? "Diamond" : hang == 2 ? "Gold" : hang == 1 ? "Silver" : "Member";
-        this.tongChiTieuTichLuy = BigDecimal.ZERO;
-        this.trangThai = hoatDong;
-        this.nhanKhuyenMai = nhanKM;
         this.ghiChu = ghiChu;
-        this.taoLuc = taoLuc != null ? taoLuc : LocalDateTime.now();
-        this.capNhatLuc = capNhatLuc != null ? capNhatLuc : this.taoLuc;
+        this.nhanKhuyenMai = nhanKhuyenMai;
+        this.ngayTao = ngayTao != null ? ngayTao : LocalDateTime.now();
+        this.ngayCapNhat = ngayCapNhat != null ? ngayCapNhat : this.ngayTao;
     }
 
-    // --- Getters / Setters chuẩn SQL ---
+    // Constructor lược giản thường dùng khi Insert từ UI (Các trường có default sẽ tự sinh)
+    public KhachHang(String maKH, String tenKH, String sdt, String email, String diaChi, LocalDate ngaySinh,
+                     boolean gioiTinh, String hangTV, double tongChiTieuTichLuy, boolean trangThai) {
+        this(maKH, tenKH, sdt, email, diaChi, ngaySinh, Boolean.valueOf(gioiTinh), hangTV,
+                BigDecimal.valueOf(Math.max(0.0, tongChiTieuTichLuy)), trangThai, null, false, 
+                LocalDateTime.now(), LocalDateTime.now());
+    }
+
+    // Copy Constructor
+    public KhachHang(KhachHang other) {
+        this(other.maKH, other.tenKH, other.sdt, other.email, other.diaChi, other.ngaySinh, other.gioiTinh,
+             other.hangTV, other.tongChiTieuTichLuy, other.trangThai, other.ghiChu, other.nhanKhuyenMai, 
+             other.ngayTao, other.ngayCapNhat);
+    }
+
+    // --- Getters / Setters chuẩn DB ---
 
     public String getMaKH() { return maKH; }
     public void setMaKH(String maKH) { this.maKH = maKH; }
 
-    public String getHoTen() { return hoTen; }
-    public void setHoTen(String hoTen) { this.hoTen = hoTen; }
+    public String getTenKH() { return tenKH; }
+    public void setTenKH(String tenKH) { this.tenKH = tenKH; }
 
     public String getSdt() { return sdt; }
     public void setSdt(String sdt) { this.sdt = sdt; }
@@ -123,40 +107,35 @@ public class KhachHang {
         this.tongChiTieuTichLuy = BigDecimal.valueOf(Math.max(0.0, tongChiTieuTichLuy))
                 .setScale(0, java.math.RoundingMode.HALF_UP);
     }
+    public void setTongChiTieuTichLuy(BigDecimal tongChiTieuTichLuy) {
+        this.tongChiTieuTichLuy = tongChiTieuTichLuy == null ? BigDecimal.ZERO
+                : tongChiTieuTichLuy.max(BigDecimal.ZERO).setScale(0, java.math.RoundingMode.HALF_UP);
+    }
 
     public boolean isTrangThai() { return trangThai; }
     public void setTrangThai(boolean trangThai) { this.trangThai = trangThai; }
-
-    // --- Aliases thuận tiện cho mã nghiệp vụ & UI ---
-
-    public String getId() { return maKH; }
-    public void setId(String id) { this.maKH = id; }
-
-    public String getSoDienThoai() { return sdt; }
-    public void setSoDienThoai(String sdt) { this.sdt = sdt; }
-
-    public boolean isDangHoatDong() { return trangThai; }
-    public void setDangHoatDong(boolean dangHoatDong) { this.trangThai = dangHoatDong; }
-
-    public BigDecimal getTongChiTieu() {
-        return tongChiTieuTichLuy;
-    }
-    public void setTongChiTieu(BigDecimal tong) {
-        this.tongChiTieuTichLuy = tong == null ? BigDecimal.ZERO
-                : tong.max(BigDecimal.ZERO).setScale(0, java.math.RoundingMode.HALF_UP);
-    }
 
     public String getGhiChu() { return ghiChu != null ? ghiChu : ""; }
     public void setGhiChu(String ghiChu) { this.ghiChu = ghiChu; }
 
     public boolean isNhanKhuyenMai() { return nhanKhuyenMai; }
-    public void setNhanKhuyenMai(boolean nhanKM) { this.nhanKhuyenMai = nhanKM; }
+    public void setNhanKhuyenMai(boolean nhanKhuyenMai) { this.nhanKhuyenMai = nhanKhuyenMai; }
 
-    public LocalDateTime getTaoLuc() { return taoLuc; }
-    public void setTaoLuc(LocalDateTime luc) { this.taoLuc = luc; }
+    public LocalDateTime getNgayTao() { return ngayTao; }
+    public void setNgayTao(LocalDateTime ngayTao) { this.ngayTao = ngayTao; }
 
-    public LocalDateTime getCapNhatLuc() { return capNhatLuc != null ? capNhatLuc : LocalDateTime.now(); }
-    public void setCapNhatLuc(LocalDateTime luc) { this.capNhatLuc = luc; }
+    public LocalDateTime getNgayCapNhat() { return ngayCapNhat != null ? ngayCapNhat : LocalDateTime.now(); }
+    public void setNgayCapNhat(LocalDateTime ngayCapNhat) { this.ngayCapNhat = ngayCapNhat; }
+
+    // --- Phương thức hỗ trợ UI (Tuỳ chọn) ---
+    public String getId() { return maKH; }
+    public void setId(String id) { this.maKH = id; }
+    public String getSoDienThoai() { return sdt; }
+    public void setSoDienThoai(String sdt) { this.sdt = sdt; }
+    public boolean isDangHoatDong() { return trangThai; }
+    public void setDangHoatDong(boolean dangHoatDong) { this.trangThai = dangHoatDong; }
+
+    // --- Override Base Methods ---
 
     @Override
     public boolean equals(Object o) {
@@ -173,6 +152,6 @@ public class KhachHang {
 
     @Override
     public String toString() {
-        return hoTen != null ? (hoTen + " (" + (sdt != null ? sdt : maKH) + ")") : (maKH != null ? maKH : "");
+        return tenKH != null ? (tenKH + " (" + (sdt != null ? sdt : maKH) + ")") : (maKH != null ? maKH : "");
     }
 }

@@ -13,7 +13,7 @@ public class NhanVien {
 	private LocalDate ngaySinh;
 	private String diachi;
 	private String chucVu;
-	private boolean trangThai; // true: Đang làm việc, false: Nghỉ việc/Tạm nghỉ
+	private boolean trangThai; // true: Đang làm việc, false: Tạm nghỉ
 	private Date ngayVaoLam;
 	private String anhDaiDien;
 
@@ -82,7 +82,7 @@ public class NhanVien {
 	}
 
 	public void setEmail(String email) {
-		if (email != null && !email.isEmpty() && !email.matches("[A-Za-z0-9+_.-]+@(.+)")) {
+		if (email != null && !email.trim().isEmpty() && !email.matches("[A-Za-z0-9+_.-]+@(.+)")) {
 			throw new IllegalArgumentException("Địa chỉ email không hợp lệ!");
 		}
 		this.email = email;
@@ -114,7 +114,7 @@ public class NhanVien {
 //			throw new IllegalArgumentException("Chức vụ không hợp lệ theo quy định hệ thống!");
 //		}
 		this.chucVu = chucVu;
-	}	
+	}
 
 	public boolean isTrangThai() {
 		return trangThai;
@@ -144,8 +144,7 @@ public class NhanVien {
 	public String toString() {
 		return "NhanVien [maNV=" + maNV + ", hoTen=" + hoTen + ", gioiTinh=" + gioiTinh + ", sdt=" + sdt + ", email="
 				+ email + ", ngaySinh=" + ngaySinh + ", diachi=" + diachi + ", chucVu=" + chucVu + ", trangThai="
-				+ trangThai + ", ngayVaoLam=" + ngayVaoLam + ", anhDaiDien=" + anhDaiDien
-				+ "]";
+				+ trangThai + ", ngayVaoLam=" + ngayVaoLam + ", anhDaiDien=" + anhDaiDien + "]";
 	}
 
 	@Override

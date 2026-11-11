@@ -5,7 +5,6 @@ import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 
 import connect.ConnectDB;
@@ -13,194 +12,82 @@ import entity.NhanVien;
 
 public class NhanVien_DAO {
 
-	// ========================== ĐỌC DỮ LIỆU NHÂN VIÊN ==========================
+	private static final String SELECT_COLUMNS = "maNV, hoTen, gioiTinh, sdt, email, ngaySinh, "
+			+ "diaChi, chucVu, trangThai, ngayVaoLam";
 
+	// Chuyển dữ liệu từ ResultSet sang entity
+	private NhanVien mapNhanVien(ResultSet rs) throws SQLException {
+		NhanVien nv = new NhanVien();
+
+		nv.setMaNV(rs.getString("maNV"));
+		nv.setHoTen(rs.getString("hoTen"));
+		nv.setGioiTinh(rs.getBoolean("gioiTinh"));
+		nv.setSdt(rs.getString("sdt"));
+		nv.setEmail(rs.getString("email"));
+
+		Date ngaySinh = rs.getDate("ngaySinh");
+		nv.setNgaySinh(ngaySinh != null ? ngaySinh.toLocalDate() : null);
+
+		nv.setDiachi(rs.getString("diaChi"));
+		nv.setChucVu(rs.getString("chucVu"));
+		nv.setTrangThai(rs.getBoolean("trangThai"));
+		nv.setNgayVaoLam(rs.getDate("ngayVaoLam"));
+
+		// Bảng hiện tại chưa có cột anhDaiDien
+		nv.setAnhDaiDien(null);
+
+		return nv;
+	}
+
+	private Date toSqlDate(java.util.Date date) {
+		return date == null ? null : new Date(date.getTime());
+	}
+
+	private void setDateOrNull(PreparedStatement ps, int index, Date date) throws SQLException {
+
+		if (date == null) {
+			ps.setNull(index, java.sql.Types.DATE);
+		} else {
+			ps.setDate(index, date);
+		}
+	}
+
+	// Lấy toàn bộ nhân viên
 	public ArrayList<NhanVien> getalltblNhanVien() {
-		ArrayList<NhanVien> dsNhanVien = new ArrayList<>();
+		ArrayList<NhanVien> dsNV = new ArrayList<>();
 
-		Connection con = ConnectDB.getConnection();
+		String sql = "SELECT " + SELECT_COLUMNS + " FROM NhanVien";
 
-		if (con == null) {
-			System.out.println("Không thể lấy dữ liệu: Chưa kết nối database!");
-			return dsNhanVien;
-		}
-
-		String sql = "SELECT * FROM NhanVien";
-
-		try (Statement statement = con.createStatement(); ResultSet rs = statement.executeQuery(sql)) {
+		try (Connection con = ConnectDB.getConnection();
+				PreparedStatement ps = con.prepareStatement(sql);
+				ResultSet rs = ps.executeQuery()) {
 
 			while (rs.next()) {
-				NhanVien nv = new NhanVien();
-
-				nv.setMaNV(rs.getString("maNV"));
-				nv.setHoTen(rs.getString("hoTen"));
-				nv.setGioiTinh(rs.getString("gioiTinh").equalsIgnoreCase("Nam"));
-
-				java.sql.Date ngaySinh = rs.getDate("ngaySinh");
-				nv.setNgaySinh(ngaySinh != null ? ngaySinh.toLocalDate() : null);
-
-				nv.setSdt(rs.getString("sdt"));
-				nv.setEmail(rs.getString("email"));
-				nv.setChucVu(rs.getString("chucVu"));
-				nv.setTrangThai(rs.getString("trangThai"));
-				nv.setDiachi(rs.getString("diaChi"));
-				nv.setNgayVaoLam(rs.getDate("ngayVaoLam"));
-				nv.setAnhDaiDien(rs.getString("anhDaiDien"));
-
-				dsNhanVien.add(nv);
+				dsNV.add(mapNhanVien(rs));
 			}
 
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
 
-		return dsNhanVien;
-	}
-	// ========================== TẠO NHÂN VIÊN MỚI ==========================
-
-	public boolean create(NhanVien nv) {
-		int n = 0;
-
-		try {
-			Connection con = ConnectDB.getConnection();
-
-			String sql = "INSERT INTO NhanVien " + "(maNV, hoTen, gioiTinh, ngaySinh, sdt, email, chucVu, "
-					+ "trangThai, diaChi, ghiChu, anhDaiDien, ngayVaoLam) "
-					+ "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-
-			PreparedStatement stmt = con.prepareStatement(sql);
-
-			stmt.setString(1, nv.getMaNV());
-			stmt.setString(2, nv.getHoTen());
-			stmt.setString(3, nv.isGioiTinh() ? "Nam" : "Nữ");
-			stmt.setDate(4, Date.valueOf(nv.getNgaySinh()));
-			stmt.setString(5, nv.getSdt());
-			stmt.setString(6, nv.getEmail());
-			stmt.setString(7, nv.getChucVu());
-			stmt.setString(8, nv.getTrangThai());
-			stmt.setString(9, nv.getDiachi());
-			stmt.setString(10, nv.getGhiChu());
-			stmt.setString(11, nv.getAnhDaiDien());
-			stmt.setDate(12, new Date(nv.getNgayVaoLam().getTime()));
-
-			n = stmt.executeUpdate();
-
-			stmt.close();
-
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-
-		return n > 0;
+		return dsNV;
 	}
 
-	// ========================== TÌM NHÂN VIÊN THEO MÃ ==========================
-
+	// Tìm nhân viên theo mã
 	public ArrayList<NhanVien> getNhanVienTheoMa(String maNV) {
-		ArrayList<NhanVien> dsNhanVien = new ArrayList<NhanVien>();
+		ArrayList<NhanVien> dsNV = new ArrayList<>();
 
-		try {
-			Connection con = ConnectDB.getConnection();
+		String sql = "SELECT " + SELECT_COLUMNS + " FROM NhanVien WHERE maNV = ?";
 
-			String sql = "SELECT * FROM NhanVien WHERE maNV = ?";
-			PreparedStatement stmt = con.prepareStatement(sql);
+		try (Connection con = ConnectDB.getConnection(); PreparedStatement ps = con.prepareStatement(sql)) {
 
-			stmt.setString(1, maNV);
+			ps.setString(1, maNV);
 
-			ResultSet rs = stmt.executeQuery();
-
-			while (rs.next()) {
-				NhanVien nv = new NhanVien();
-
-				nv.setMaNV(rs.getString("maNV"));
-				nv.setHoTen(rs.getString("hoTen"));
-				nv.setGioiTinh(rs.getString("gioiTinh").equalsIgnoreCase("Nam"));
-				nv.setNgaySinh(rs.getDate("ngaySinh").toLocalDate());
-				nv.setSdt(rs.getString("sdt"));
-				nv.setEmail(rs.getString("email"));
-				nv.setChucVu(rs.getString("chucVu"));
-				nv.setTrangThai(rs.getString("trangThai"));
-				nv.setDiachi(rs.getString("diaChi"));
-				nv.setNgayVaoLam(rs.getDate("ngayVaoLam"));
-				nv.setGhiChu(rs.getString("ghiChu"));
-				nv.setAnhDaiDien(rs.getString("anhDaiDien"));
-
-				dsNhanVien.add(nv);
+			try (ResultSet rs = ps.executeQuery()) {
+				while (rs.next()) {
+					dsNV.add(mapNhanVien(rs));
+				}
 			}
-
-			rs.close();
-			stmt.close();
-
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-
-		return dsNhanVien;
-	}
-
-	// ========================== XÓA NHÂN VIÊN ==========================
-
-	public boolean xoaNhanVien(String maNV) {
-		int n = 0;
-
-		try {
-			Connection con = ConnectDB.getConnection();
-
-			String sql = "DELETE FROM NhanVien WHERE maNV = ?";
-			PreparedStatement stmt = con.prepareStatement(sql);
-
-			stmt.setString(1, maNV);
-
-			n = stmt.executeUpdate();
-
-			stmt.close();
-//			con.close();
-
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-
-		return n > 0;
-	}
-
-	// ========================== LỌC NHÂN VIÊN THEO CHỨC VỤ
-	// ==========================
-
-	public ArrayList<NhanVien> getTblTheoChucVu(String chucVu) {
-		ArrayList<NhanVien> dsNV = new ArrayList<NhanVien>();
-
-		try {
-			Connection con = ConnectDB.getConnection();
-
-			String sql = "SELECT * FROM NhanVien WHERE chucVu = ?";
-			PreparedStatement stmt = con.prepareStatement(sql);
-
-			stmt.setString(1, chucVu);
-
-			ResultSet rs = stmt.executeQuery();
-
-			while (rs.next()) {
-				NhanVien nv = new NhanVien();
-
-				nv.setMaNV(rs.getString("maNV"));
-				nv.setHoTen(rs.getString("hoTen"));
-				nv.setGioiTinh(rs.getString("gioiTinh").equalsIgnoreCase("Nam"));
-				nv.setNgaySinh(rs.getDate("ngaySinh").toLocalDate());
-				nv.setSdt(rs.getString("sdt"));
-				nv.setEmail(rs.getString("email"));
-				nv.setChucVu(rs.getString("chucVu"));
-				nv.setTrangThai(rs.getString("trangThai"));
-				nv.setDiachi(rs.getString("diaChi"));
-				nv.setNgayVaoLam(rs.getDate("ngayVaoLam"));
-				nv.setGhiChu(rs.getString("ghiChu"));
-				nv.setAnhDaiDien(rs.getString("anhDaiDien"));
-
-				dsNV.add(nv);
-			}
-
-			rs.close();
-			stmt.close();
-//			con.close();
 
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -209,184 +96,106 @@ public class NhanVien_DAO {
 		return dsNV;
 	}
 
-	// ========================== LỌC NHÂN VIÊN THEO TRẠNG THÁI
-	// ==========================
+	// Kiểm tra mã nhân viên đã tồn tại
+	public boolean kiemTraMaNV(String maNV) {
+		String sql = "SELECT COUNT(*) FROM NhanVien WHERE maNV = ?";
 
-	public ArrayList<NhanVien> getTblTheoTrangThai(String trangThai) {
-		ArrayList<NhanVien> dsNV = new ArrayList<NhanVien>();
+		try (Connection con = ConnectDB.getConnection(); PreparedStatement ps = con.prepareStatement(sql)) {
 
-		try {
-			Connection con = ConnectDB.getConnection();
+			ps.setString(1, maNV);
 
-			String sql = "SELECT * FROM NhanVien WHERE trangThai = ?";
-			PreparedStatement stmt = con.prepareStatement(sql);
-
-			stmt.setString(1, trangThai);
-
-			ResultSet rs = stmt.executeQuery();
-
-			while (rs.next()) {
-				NhanVien nv = new NhanVien();
-
-				nv.setMaNV(rs.getString("maNV"));
-				nv.setHoTen(rs.getString("hoTen"));
-				nv.setGioiTinh(rs.getString("gioiTinh").equalsIgnoreCase("Nam"));
-				nv.setNgaySinh(rs.getDate("ngaySinh").toLocalDate());
-				nv.setSdt(rs.getString("sdt"));
-				nv.setEmail(rs.getString("email"));
-				nv.setChucVu(rs.getString("chucVu"));
-				nv.setTrangThai(rs.getString("trangThai"));
-				nv.setDiachi(rs.getString("diaChi"));
-				nv.setNgayVaoLam(rs.getDate("ngayVaoLam"));
-				nv.setGhiChu(rs.getString("ghiChu"));
-				nv.setAnhDaiDien(rs.getString("anhDaiDien"));
-
-				dsNV.add(nv);
+			try (ResultSet rs = ps.executeQuery()) {
+				if (rs.next()) {
+					return rs.getInt(1) > 0;
+				}
 			}
 
-			rs.close();
-			stmt.close();
-//			con.close();
-
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
 
-		return dsNV;
+		return false;
 	}
 
-	// ========================== LỌC NHÂN VIÊN THEO GIỚI TÍNH
-	// ==========================
+	// Thêm nhân viên
+	public boolean create(NhanVien nv) {
+		String sql = "INSERT INTO NhanVien " + "(maNV, hoTen, gioiTinh, sdt, email, ngaySinh, "
+				+ "diaChi, chucVu, trangThai, ngayVaoLam) " + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-	public ArrayList<NhanVien> getTblTheoGioiTinh(boolean gioiTinh) {
-		ArrayList<NhanVien> dsNV = new ArrayList<NhanVien>();
+		try (Connection con = ConnectDB.getConnection(); PreparedStatement ps = con.prepareStatement(sql)) {
 
-		try {
-			Connection con = ConnectDB.getConnection();
+			ps.setString(1, nv.getMaNV());
+			ps.setString(2, nv.getHoTen());
+			ps.setBoolean(3, nv.isGioiTinh());
+			ps.setString(4, nv.getSdt());
+			ps.setString(5, nv.getEmail());
 
-			String sql = "SELECT * FROM NhanVien WHERE gioiTinh = ?";
-			PreparedStatement stmt = con.prepareStatement(sql);
-
-			stmt.setString(1, gioiTinh ? "Nam" : "Nữ");
-
-			ResultSet rs = stmt.executeQuery();
-
-			while (rs.next()) {
-				NhanVien nv = new NhanVien();
-
-				nv.setMaNV(rs.getString("maNV"));
-				nv.setHoTen(rs.getString("hoTen"));
-				nv.setGioiTinh(rs.getString("gioiTinh").equalsIgnoreCase("Nam"));
-				nv.setNgaySinh(rs.getDate("ngaySinh").toLocalDate());
-				nv.setSdt(rs.getString("sdt"));
-				nv.setEmail(rs.getString("email"));
-				nv.setChucVu(rs.getString("chucVu"));
-				nv.setTrangThai(rs.getString("trangThai"));
-				nv.setDiachi(rs.getString("diaChi"));
-				nv.setNgayVaoLam(rs.getDate("ngayVaoLam"));
-				nv.setGhiChu(rs.getString("ghiChu"));
-				nv.setAnhDaiDien(rs.getString("anhDaiDien"));
-
-				dsNV.add(nv);
+			if (nv.getNgaySinh() != null) {
+				ps.setDate(6, Date.valueOf(nv.getNgaySinh()));
+			} else {
+				ps.setNull(6, java.sql.Types.DATE);
 			}
 
-			rs.close();
-			stmt.close();
-//			con.close();
+			ps.setString(7, nv.getDiachi());
+			ps.setString(8, nv.getChucVu());
+			ps.setBoolean(9, nv.isTrangThai());
+			ps.setDate(10, toSqlDate(nv.getNgayVaoLam()));
+
+			return ps.executeUpdate() > 0;
 
 		} catch (SQLException e) {
 			e.printStackTrace();
+			return false;
 		}
-
-		return dsNV;
 	}
 
-	// ========================== TÌM KIẾM NHÂN VIÊN ==========================
+	// Cập nhật nhân viên, cho phép sửa cả mã nhân viên
+	public boolean update(NhanVien nv, String maNVCu) {
+		String sql = "UPDATE NhanVien SET " + "maNV = ?, hoTen = ?, gioiTinh = ?, sdt = ?, "
+				+ "email = ?, ngaySinh = ?, diaChi = ?, chucVu = ?, " + "trangThai = ?, ngayVaoLam = ? "
+				+ "WHERE maNV = ?";
 
-	public ArrayList<NhanVien> timKiemNhanVien(String tuKhoa) {
-		ArrayList<NhanVien> dsNV = new ArrayList<NhanVien>();
+		try (Connection con = ConnectDB.getConnection(); PreparedStatement ps = con.prepareStatement(sql)) {
 
-		try {
-			Connection con = ConnectDB.getConnection();
+			ps.setString(1, nv.getMaNV());
+			ps.setString(2, nv.getHoTen());
+			ps.setBoolean(3, nv.isGioiTinh());
+			ps.setString(4, nv.getSdt());
+			ps.setString(5, nv.getEmail());
 
-			String sql = "SELECT * FROM NhanVien " + "WHERE maNV LIKE ? OR hoTen LIKE ? "
-					+ "OR sdt LIKE ? OR email LIKE ?";
-
-			PreparedStatement stmt = con.prepareStatement(sql);
-
-			stmt.setString(1, "%" + tuKhoa + "%");
-			stmt.setString(2, "%" + tuKhoa + "%");
-			stmt.setString(3, "%" + tuKhoa + "%");
-			stmt.setString(4, "%" + tuKhoa + "%");
-
-			ResultSet rs = stmt.executeQuery();
-
-			while (rs.next()) {
-				NhanVien nv = new NhanVien();
-
-				nv.setMaNV(rs.getString("maNV"));
-				nv.setHoTen(rs.getString("hoTen"));
-				nv.setGioiTinh(rs.getString("gioiTinh").equalsIgnoreCase("Nam"));
-				nv.setNgaySinh(rs.getDate("ngaySinh").toLocalDate());
-				nv.setSdt(rs.getString("sdt"));
-				nv.setEmail(rs.getString("email"));
-				nv.setChucVu(rs.getString("chucVu"));
-				nv.setTrangThai(rs.getString("trangThai"));
-				nv.setDiachi(rs.getString("diaChi"));
-				nv.setNgayVaoLam(rs.getDate("ngayVaoLam"));
-				nv.setGhiChu(rs.getString("ghiChu"));
-				nv.setAnhDaiDien(rs.getString("anhDaiDien"));
-
-				dsNV.add(nv);
+			if (nv.getNgaySinh() != null) {
+				ps.setDate(6, Date.valueOf(nv.getNgaySinh()));
+			} else {
+				ps.setNull(6, java.sql.Types.DATE);
 			}
 
-			rs.close();
-			stmt.close();
-//			con.close();
+			ps.setString(7, nv.getDiachi());
+			ps.setString(8, nv.getChucVu());
+			ps.setBoolean(9, nv.isTrangThai());
+			ps.setDate(10, toSqlDate(nv.getNgayVaoLam()));
+			ps.setString(11, maNVCu);
+
+			return ps.executeUpdate() > 0;
 
 		} catch (SQLException e) {
 			e.printStackTrace();
+			return false;
 		}
-
-		return dsNV;
 	}
 
-	// ========================== CẬP NHẬT NHÂN VIÊN ==========================
+	// Chuyển trạng thái nhân viên sang nghỉ việc
+	// Không xóa vĩnh viễn dữ liệu
+	public boolean capNhatTrangThaiNghiViec(String maNV) {
+		String sql = "UPDATE NhanVien SET trangThai = 0 WHERE maNV = ?";
 
-	public boolean update(NhanVien nv) {
-		int n = 0;
+		try (Connection con = ConnectDB.getConnection(); PreparedStatement ps = con.prepareStatement(sql)) {
 
-		try {
-			Connection con = ConnectDB.getConnection();
-
-			String sql = "UPDATE NhanVien SET " + "hoTen = ?, gioiTinh = ?, ngaySinh = ?, sdt = ?, "
-					+ "email = ?, chucVu = ?, trangThai = ?, diaChi = ?, "
-					+ "ghiChu = ?, anhDaiDien = ?, ngayVaoLam = ? " + "WHERE maNV = ?";
-
-			PreparedStatement stmt = con.prepareStatement(sql);
-
-			stmt.setString(1, nv.getHoTen());
-			stmt.setString(2, nv.isGioiTinh() ? "Nam" : "Nữ");
-			stmt.setDate(3, Date.valueOf(nv.getNgaySinh()));
-			stmt.setString(4, nv.getSdt());
-			stmt.setString(5, nv.getEmail());
-			stmt.setString(6, nv.getChucVu());
-			stmt.setString(7, nv.getTrangThai());
-			stmt.setString(8, nv.getDiachi());
-			stmt.setString(9, nv.getGhiChu());
-			stmt.setString(10, nv.getAnhDaiDien());
-			stmt.setDate(11, new Date(nv.getNgayVaoLam().getTime()));
-			stmt.setString(12, nv.getMaNV());
-
-			n = stmt.executeUpdate();
-
-			stmt.close();
-//			con.close();
+			ps.setString(1, maNV);
+			return ps.executeUpdate() > 0;
 
 		} catch (SQLException e) {
 			e.printStackTrace();
+			return false;
 		}
-
-		return n > 0;
 	}
 }

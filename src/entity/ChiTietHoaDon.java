@@ -1,27 +1,32 @@
 package entity;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Objects;
 
 public class ChiTietHoaDon {
     private int soLuong;
-    private double donGia;
-    private double thanhTien;
+    private BigDecimal donGia;
+    private BigDecimal thanhTien;
     private SanPham sanPham;
     private HoaDon hoaDon;
 
     public ChiTietHoaDon() {
+        this.donGia = BigDecimal.ZERO;
+        this.thanhTien = BigDecimal.ZERO;
     }
 
-    public ChiTietHoaDon(int soLuong, double donGia, SanPham sp, HoaDon hd) {
+    public ChiTietHoaDon(int soLuong, BigDecimal donGia, SanPham sanPham, HoaDon hoaDon) {
         setSoLuong(soLuong);
         setDonGia(donGia);
-        this.sanPham = sp;
-        this.hoaDon = hd;
-        this.thanhTien = tinhThanhTien();
+        this.sanPham = sanPham;
+        this.hoaDon = hoaDon;
     }
 
-    public double tinhThanhTien() {
-        return this.soLuong * this.donGia;
+    // Tự động tính thành tiền: soLuong * donGia
+    public BigDecimal tinhThanhTien() {
+        if (this.donGia == null) return BigDecimal.ZERO;
+        return this.donGia.multiply(BigDecimal.valueOf(this.soLuong)).setScale(0, RoundingMode.HALF_UP);
     }
 
     public int getSoLuong() {
@@ -36,41 +41,49 @@ public class ChiTietHoaDon {
         this.thanhTien = tinhThanhTien();
     }
 
-    public double getDonGia() {
+    public BigDecimal getDonGia() {
         return donGia;
     }
 
-    public void setDonGia(double donGia) {
-        if (donGia < 0) {
+    public void setDonGia(BigDecimal donGia) {
+        if (donGia == null || donGia.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("Đơn giá không được âm!");
         }
-        this.donGia = donGia;
+        this.donGia = donGia.setScale(0, RoundingMode.HALF_UP);
         this.thanhTien = tinhThanhTien();
     }
 
-    public double getThanhTien() {
+    public BigDecimal getThanhTien() {
+        if (thanhTien == null) {
+            thanhTien = tinhThanhTien();
+        }
         return thanhTien;
     }
 
-    public SanPham getSp() {
+    // Hỗ trợ set trực tiếp nếu cần thiết
+    public void setThanhTien(BigDecimal thanhTien) {
+        this.thanhTien = thanhTien != null ? thanhTien.setScale(0, RoundingMode.HALF_UP) : BigDecimal.ZERO;
+    }
+
+    public SanPham getSanPham() {
         return sanPham;
     }
 
-    public void setSp(SanPham sp) {
-        this.sanPham = sp;
+    public void setSanPham(SanPham sanPham) {
+        this.sanPham = sanPham;
     }
 
-    public HoaDon getHd() {
+    public HoaDon getHoaDon() {
         return hoaDon;
     }
 
-    public void setHd(HoaDon hd) {
-        this.hoaDon = hd;
+    public void setHoaDon(HoaDon hoaDon) {
+        this.hoaDon = hoaDon;
     }
 
     @Override
     public String toString() {
         return "ChiTietHoaDon [soLuong=" + soLuong + ", donGia=" + donGia + ", thanhTien=" + thanhTien 
-                + ", sp=" + (sanPham != null ? sanPham.getTenSP() : null) + "]";
+                + ", sanPham=" + (sanPham != null ? sanPham.getTenSP() : null) + "]";
     }
 }

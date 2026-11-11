@@ -3,7 +3,7 @@
    Chạy sau QuanLyBanHang.sql và trước 03_DuLieuMau.sql nếu dùng schema cũ.
    Dữ liệu tồn kho cũ được đặt về 0 vì schema cũ không lưu số lượng.
 */
-USE QuanLyBanHang;
+/*USE QuanLyBanHang;
 GO
 SET XACT_ABORT ON;
 BEGIN TRY

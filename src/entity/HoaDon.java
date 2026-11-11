@@ -107,4 +107,28 @@ public class HoaDon {
 	public void setTrangThai(String trangThai) {
 		this.trangThai = trangThai;
 	}
+
+	public NhanVien getNhanVien() {
+		return nhanVien;
+	}
+
+	public void setNhanVien(NhanVien nhanVien) {
+		this.nhanVien = nhanVien;
+	}
+
+	public KhachHang getKhahHang() {
+		return khahHang;
+	}
+
+	public void setKhahHang(KhachHang khahHang) {
+		this.khahHang = khahHang;
+	}
+
+	public KhuyenMai getKhuyenMai() {
+		return khuyenMai;
+	}
+
+	public void setKhuyenMai(KhuyenMai khuyenMai) {
+		this.khuyenMai = khuyenMai;
+	}
 }

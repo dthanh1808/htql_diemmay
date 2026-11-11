@@ -723,7 +723,7 @@ public class PNL_BanHang extends JPanel {
         pnlCust.setOpaque(false);
         pnlCust.setMaximumSize(new Dimension(Integer.MAX_VALUE, 25));
 
-        String tenKH = (currentKhachHang != null) ? currentKhachHang.getHoTen() : "Khách hàng vãng lai";
+        String tenKH = (currentKhachHang != null) ? currentKhachHang.getTenKH() : "Khách hàng vãng lai";
         String sdtKH = (currentKhachHang != null) ? currentKhachHang.getSoDienThoai() : "---";
         
         JLabel lblCustName = new JLabel(tenKH);
@@ -985,7 +985,7 @@ public class PNL_BanHang extends JPanel {
                 Component c = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
                 if (value instanceof KhachHang) {
                     KhachHang kh = (KhachHang) value;
-                    setText(kh.getHoTen() + " - " + kh.getSoDienThoai());
+                    setText(kh.getTenKH() + " - " + kh.getSoDienThoai());
                     setBorder(BorderFactory.createEmptyBorder(8, 10, 8, 10));
                 }
                 return c;
@@ -1040,10 +1040,10 @@ public class PNL_BanHang extends JPanel {
         popupSearch.setVisible(false);
         this.currentKhachHang = kh; 
         
-        String ten = kh.getHoTen().trim();
+        String ten = kh.getTenKH().trim();
         String initChar = ten.isEmpty() ? "?" : ten.substring(0, 1).toUpperCase();
         lblAvatar.setText(initChar);
-        lblCustName.setText(kh.getHoTen());
+        lblCustName.setText(kh.getTenKH());
         lblCustID.setText(kh.getId());
         lblPhone.setText("📞 " + kh.getSoDienThoai());
         lblEmail.setText("✉ " + (kh.getEmail() != null && !kh.getEmail().isEmpty() ? kh.getEmail() : "Không có email"));
